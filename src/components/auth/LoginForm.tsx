@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Scissors, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 
 interface LoginFormProps {
   onToggleMode: () => void;
@@ -50,8 +50,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   return (
     <Card className="w-full max-w-md mx-auto barber-card">
       <CardHeader className="text-center">
-        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#004E64] to-[#003A4A] rounded-full">
-          <Scissors className="w-8 h-8 text-white" />
+        <div className="flex items-center justify-center w-24 h-24 mx-auto mb-4">
+          <img 
+            src="/lovable-uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
+            alt="BarberTime Logo" 
+            className="w-full h-full object-contain"
+          />
         </div>
         <CardTitle className="text-2xl font-bold barber-text-primary">Fazer Login</CardTitle>
         <CardDescription className="barber-text-secondary">

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Clock, Crown } from 'lucide-react';
+import { Crown } from 'lucide-react';
 
 interface TrialExpiredModalProps {
   isOpen: boolean;
@@ -18,8 +18,12 @@ export const TrialExpiredModal: React.FC<TrialExpiredModalProps> = ({ isOpen, on
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#004E64] to-[#003A4A] rounded-full">
-            <Clock className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4">
+            <img 
+              src="/lovable-uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
+              alt="BarberTime Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <DialogTitle className="text-center text-xl font-semibold barber-text-primary">
             Período gratuito expirado
