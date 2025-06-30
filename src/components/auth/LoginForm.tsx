@@ -50,20 +50,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   return (
     <Card className="w-full max-w-md mx-auto barber-card">
       <CardHeader className="text-center">
-        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#00657C] to-[#004A5A] rounded-full">
+        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#004E64] to-[#003A4A] rounded-full">
           <Scissors className="w-8 h-8 text-white" />
         </div>
-        <CardTitle className="text-2xl font-bold">Fazer Login</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-bold barber-text-primary">Fazer Login</CardTitle>
+        <CardDescription className="barber-text-secondary">
           Acesse sua conta no BarberTime
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="barber-text-primary">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-[#888]" />
               <Input
                 id="email"
                 type="email"
@@ -77,9 +77,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password" className="barber-text-primary">Senha</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-[#888]" />
               <Input
                 id="password"
                 type="password"
@@ -102,11 +102,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm barber-text-secondary">
             Não tem uma conta?{' '}
             <button
               onClick={onToggleMode}
-              className="text-[#00657C] hover:text-[#004A5A] font-medium"
+              className="text-[#004E64] hover:text-[#003A4A] font-medium"
             >
               Criar conta
             </button>
