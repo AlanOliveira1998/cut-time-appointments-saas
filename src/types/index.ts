@@ -40,11 +40,13 @@ export interface Appointment {
 }
 
 export interface AuthContextType {
-  user: User | null;
+  user: any | null; // Using Supabase User type
+  session: any | null; // Using Supabase Session type
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isTrialExpired: () => boolean;
+  loading: boolean;
 }
 
 export interface BookingFormData {

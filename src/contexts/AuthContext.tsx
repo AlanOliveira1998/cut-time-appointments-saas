@@ -1,6 +1,18 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthContextType } from '../types';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  isTrialExpired: () => boolean;
+  loading: boolean;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -14,103 +26,145 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se há usuário logado no localStorage
-    const storedUser = localStorage.getItem('barbertime_user');
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setUser({
-        ...userData,
-        createdAt: new Date(userData.createdAt)
-      });
-    }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simular busca no banco de dados
-      const users = JSON.parse(localStorage.getItem('barbertime_users') || '[]');
-      const foundUser = users.find((u: any) => u.email === email && u.password === password);
-      
-      if (foundUser) {
-        const userData = {
-          ...foundUser,
-          createdAt: new Date(foundUser.createdAt)
-        };
-        delete userData.password; // Remover senha dos dados do usuário
-        
-        setUser(userData);
-        localStorage.setItem('barbertime_user', JSON.stringify(userData));
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Erro no login",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      if (data.user) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo de volta ao BarberTime",
+        });
         return true;
       }
+      
       return false;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.error('Login error:', error);
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
     try {
-      // Verificar se o email já existe
-      const users = JSON.parse(localStorage.getItem('barbertime_users') || '[]');
-      const emailExists = users.some((u: any) => u.email === email);
+      setLoading(true);
+      const redirectUrl = `${window.location.origin}/`;
       
-      if (emailExists) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name,
+            phone,
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Register error:', error);
+        toast({
+          title: "Erro no cadastro",
+          description: error.message,
+          variant: "destructive",
+        });
         return false;
       }
 
-      // Criar novo usuário
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        phone,
-        password,
-        createdAt: new Date().toISOString(),
-        isActive: true
-      };
-
-      users.push(newUser);
-      localStorage.setItem('barbertime_users', JSON.stringify(users));
-
-      // Fazer login automático
-      const userData = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        createdAt: new Date(newUser.createdAt),
-        isActive: newUser.isActive
-      };
-
-      setUser(userData);
-      localStorage.setItem('barbertime_user', JSON.stringify(userData));
-      return true;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+      if (data.user) {
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora.",
+        });
+        return true;
+      }
+      
       return false;
+    } catch (error) {
+      console.error('Register error:', error);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('barbertime_user');
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
+      
+      toast({
+        title: "Logout realizado",
+        description: "Até logo!",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const isTrialExpired = (): boolean => {
-    if (!user) return false;
+    if (!user?.created_at) return false;
     
     const now = new Date();
-    const createdDate = new Date(user.createdAt);
+    const createdDate = new Date(user.created_at);
     const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
     
     return daysDiff >= 7;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isTrialExpired }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      login, 
+      register, 
+      logout, 
+      isTrialExpired, 
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

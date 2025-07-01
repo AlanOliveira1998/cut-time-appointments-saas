@@ -9,7 +9,151 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          barber_id: string
+          client_name: string
+          client_phone: string
+          created_at: string | null
+          id: string
+          service_id: string
+          status: string | null
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          barber_id: string
+          client_name: string
+          client_phone: string
+          created_at?: string | null
+          id?: string
+          service_id: string
+          status?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          barber_id?: string
+          client_name?: string
+          client_phone?: string
+          created_at?: string | null
+          id?: string
+          service_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          barber_id: string
+          created_at: string | null
+          duration: number
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string | null
+          duration: number
+          id?: string
+          name: string
+          price: number
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string | null
+          duration?: number
+          id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      working_hours: {
+        Row: {
+          barber_id: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          start_time: string
+        }
+        Insert: {
+          barber_id: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          start_time: string
+        }
+        Update: {
+          barber_id?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_hours_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

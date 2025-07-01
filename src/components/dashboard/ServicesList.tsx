@@ -7,15 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
-import { Service } from '../../types';
+import { supabase } from '../../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Clock, DollarSign } from 'lucide-react';
+
+interface Service {
+  id: string;
+  barber_id: string;
+  name: string;
+  duration: number;
+  price: number;
+  created_at: string;
+}
 
 export const ServicesList: React.FC = () => {
   const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     duration: '',
@@ -23,62 +33,91 @@ export const ServicesList: React.FC = () => {
   });
 
   useEffect(() => {
-    loadServices();
+    if (user) {
+      loadServices();
+    }
   }, [user]);
 
-  const loadServices = () => {
+  const loadServices = async () => {
     if (!user) return;
     
-    const allServices = JSON.parse(localStorage.getItem('barbertime_services') || '[]');
-    const userServices = allServices.filter((service: Service) => service.barberId === user.id);
-    setServices(userServices);
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barber_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading services:', error);
+        toast({
+          title: "Erro ao carregar serviços",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error loading services:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) return;
 
-    const allServices = JSON.parse(localStorage.getItem('barbertime_services') || '[]');
-    
-    if (editingService) {
-      // Editar serviço existente
-      const updatedService: Service = {
-        ...editingService,
-        name: formData.name,
-        duration: parseInt(formData.duration),
-        price: parseFloat(formData.price)
-      };
+    try {
+      if (editingService) {
+        // Editar serviço existente
+        const { error } = await supabase
+          .from('services')
+          .update({
+            name: formData.name,
+            duration: parseInt(formData.duration),
+            price: parseFloat(formData.price)
+          })
+          .eq('id', editingService.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Serviço atualizado!",
+          description: "O serviço foi atualizado com sucesso.",
+        });
+      } else {
+        // Criar novo serviço
+        const { error } = await supabase
+          .from('services')
+          .insert({
+            barber_id: user.id,
+            name: formData.name,
+            duration: parseInt(formData.duration),
+            price: parseFloat(formData.price)
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Serviço criado!",
+          description: "O novo serviço foi adicionado com sucesso.",
+        });
+      }
       
-      const serviceIndex = allServices.findIndex((s: Service) => s.id === editingService.id);
-      allServices[serviceIndex] = updatedService;
-      
+      loadServices();
+      resetForm();
+    } catch (error: any) {
+      console.error('Error saving service:', error);
       toast({
-        title: "Serviço atualizado!",
-        description: "O serviço foi atualizado com sucesso.",
-      });
-    } else {
-      // Criar novo serviço
-      const newService: Service = {
-        id: Date.now().toString(),
-        barberId: user.id,
-        name: formData.name,
-        duration: parseInt(formData.duration),
-        price: parseFloat(formData.price),
-        createdAt: new Date()
-      };
-      
-      allServices.push(newService);
-      
-      toast({
-        title: "Serviço criado!",
-        description: "O novo serviço foi adicionado com sucesso.",
+        title: "Erro ao salvar serviço",
+        description: error.message,
+        variant: "destructive",
       });
     }
-    
-    localStorage.setItem('barbertime_services', JSON.stringify(allServices));
-    loadServices();
-    resetForm();
   };
 
   const handleEdit = (service: Service) => {
@@ -91,16 +130,28 @@ export const ServicesList: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (serviceId: string) => {
-    const allServices = JSON.parse(localStorage.getItem('barbertime_services') || '[]');
-    const filteredServices = allServices.filter((s: Service) => s.id !== serviceId);
-    localStorage.setItem('barbertime_services', JSON.stringify(filteredServices));
-    loadServices();
-    
-    toast({
-      title: "Serviço removido!",
-      description: "O serviço foi removido com sucesso.",
-    });
+  const handleDelete = async (serviceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
+
+      if (error) throw error;
+
+      loadServices();
+      toast({
+        title: "Serviço removido!",
+        description: "O serviço foi removido com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting service:', error);
+      toast({
+        title: "Erro ao remover serviço",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const resetForm = () => {
@@ -115,6 +166,16 @@ export const ServicesList: React.FC = () => {
       currency: 'BRL'
     }).format(price);
   };
+
+  if (loading) {
+    return (
+      <Card className="barber-card">
+        <CardContent className="p-6">
+          <div className="text-center">Carregando serviços...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="barber-card">

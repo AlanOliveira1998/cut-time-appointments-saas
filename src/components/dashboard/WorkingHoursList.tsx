@@ -6,9 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '../../contexts/AuthContext';
-import { WorkingHours } from '../../types';
+import { supabase } from '../../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Calendar, Clock } from 'lucide-react';
+
+interface WorkingHour {
+  id: string;
+  barber_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
 
 const DAYS_OF_WEEK = [
   { id: 0, name: 'Domingo', short: 'Dom' },
@@ -22,63 +31,125 @@ const DAYS_OF_WEEK = [
 
 export const WorkingHoursList: React.FC = () => {
   const { user } = useAuth();
-  const [workingHours, setWorkingHours] = useState<WorkingHours[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWorkingHours();
+    if (user) {
+      loadWorkingHours();
+    }
   }, [user]);
 
-  const loadWorkingHours = () => {
+  const loadWorkingHours = async () => {
     if (!user) return;
     
-    const allWorkingHours = JSON.parse(localStorage.getItem('barbertime_working_hours') || '[]');
-    const userWorkingHours = allWorkingHours.filter((wh: WorkingHours) => wh.barberId === user.id);
-    
-    // Se não existir horários, criar padrão
-    if (userWorkingHours.length === 0) {
-      const defaultHours: WorkingHours[] = DAYS_OF_WEEK.map(day => ({
-        id: `${user.id}-${day.id}`,
-        barberId: user.id,
-        dayOfWeek: day.id,
-        startTime: day.id === 0 ? '08:00' : '08:00', // Domingo começa mais tarde
-        endTime: day.id === 0 ? '17:00' : '18:00',
-        isActive: day.id !== 0 // Domingo desabilitado por padrão
-      }));
-      
-      const updatedAllHours = [...allWorkingHours, ...defaultHours];
-      localStorage.setItem('barbertime_working_hours', JSON.stringify(updatedAllHours));
-      setWorkingHours(defaultHours);
-    } else {
-      setWorkingHours(userWorkingHours);
+    try {
+      const { data, error } = await supabase
+        .from('working_hours')
+        .select('*')
+        .eq('barber_id', user.id)
+        .order('day_of_week');
+
+      if (error) {
+        console.error('Error loading working hours:', error);
+        return;
+      }
+
+      // Se não existir horários, criar padrão
+      if (!data || data.length === 0) {
+        await createDefaultWorkingHours();
+      } else {
+        setWorkingHours(data);
+      }
+    } catch (error) {
+      console.error('Error loading working hours:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateWorkingHour = (dayOfWeek: number, field: keyof WorkingHours, value: any) => {
-    const allWorkingHours = JSON.parse(localStorage.getItem('barbertime_working_hours') || '[]');
-    
-    const updatedHours = workingHours.map(wh => {
-      if (wh.dayOfWeek === dayOfWeek) {
-        return { ...wh, [field]: value };
+  const createDefaultWorkingHours = async () => {
+    if (!user) return;
+
+    const defaultHours = DAYS_OF_WEEK.map(day => ({
+      barber_id: user.id,
+      day_of_week: day.id,
+      start_time: '08:00',
+      end_time: day.id === 0 ? '17:00' : '18:00',
+      is_active: day.id !== 0 // Domingo desabilitado por padrão
+    }));
+
+    try {
+      const { data, error } = await supabase
+        .from('working_hours')
+        .insert(defaultHours)
+        .select();
+
+      if (error) {
+        console.error('Error creating default working hours:', error);
+        return;
       }
-      return wh;
-    });
-    
-    // Atualizar no localStorage
-    const otherBarberHours = allWorkingHours.filter((wh: WorkingHours) => wh.barberId !== user?.id);
-    const newAllHours = [...otherBarberHours, ...updatedHours];
-    localStorage.setItem('barbertime_working_hours', JSON.stringify(newAllHours));
-    
-    setWorkingHours(updatedHours);
-    
-    toast({
-      title: "Horário atualizado!",
-      description: "Seus horários de funcionamento foram salvos.",
-    });
+
+      setWorkingHours(data || []);
+    } catch (error) {
+      console.error('Error creating default working hours:', error);
+    }
   };
 
-  const getDayWorkingHour = (dayOfWeek: number): WorkingHours | undefined => {
-    return workingHours.find(wh => wh.dayOfWeek === dayOfWeek);
+  const updateWorkingHour = async (dayOfWeek: number, field: keyof WorkingHour, value: any) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('working_hours')
+        .update({ [field]: value })
+        .eq('barber_id', user.id)
+        .eq('day_of_week', dayOfWeek);
+
+      if (error) {
+        console.error('Error updating working hour:', error);
+        toast({
+          title: "Erro ao atualizar horário",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Atualizar estado local
+      setWorkingHours(prev => prev.map(wh => 
+        wh.day_of_week === dayOfWeek 
+          ? { ...wh, [field]: value }
+          : wh
+      ));
+
+      toast({
+        title: "Horário atualizado!",
+        description: "Seus horários de funcionamento foram salvos.",
+      });
+    } catch (error: any) {
+      console.error('Error updating working hour:', error);
+      toast({
+        title: "Erro ao atualizar horário",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
+
+  const getDayWorkingHour = (dayOfWeek: number): WorkingHour | undefined => {
+    return workingHours.find(wh => wh.day_of_week === dayOfWeek);
+  };
+
+  if (loading) {
+    return (
+      <Card className="barber-card">
+        <CardContent className="p-6">
+          <div className="text-center">Carregando horários de funcionamento...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="barber-card">
@@ -103,15 +174,15 @@ export const WorkingHoursList: React.FC = () => {
               <div key={day.id} className="flex items-center space-x-4 p-4 border rounded-lg">
                 <div className="flex items-center space-x-3 flex-1">
                   <Switch
-                    checked={dayHour.isActive}
-                    onCheckedChange={(checked) => updateWorkingHour(day.id, 'isActive', checked)}
+                    checked={dayHour.is_active}
+                    onCheckedChange={(checked) => updateWorkingHour(day.id, 'is_active', checked)}
                   />
                   <div className="min-w-[120px]">
                     <span className="font-medium">{day.name}</span>
                   </div>
                 </div>
                 
-                {dayHour.isActive && (
+                {dayHour.is_active && (
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-2">
                       <Clock className="w-4 h-4 text-gray-400" />
@@ -119,8 +190,8 @@ export const WorkingHoursList: React.FC = () => {
                       <Input
                         id={`start-${day.id}`}
                         type="time"
-                        value={dayHour.startTime}
-                        onChange={(e) => updateWorkingHour(day.id, 'startTime', e.target.value)}
+                        value={dayHour.start_time}
+                        onChange={(e) => updateWorkingHour(day.id, 'start_time', e.target.value)}
                         className="w-32"
                       />
                     </div>
@@ -130,15 +201,15 @@ export const WorkingHoursList: React.FC = () => {
                       <Input
                         id={`end-${day.id}`}
                         type="time"
-                        value={dayHour.endTime}
-                        onChange={(e) => updateWorkingHour(day.id, 'endTime', e.target.value)}
+                        value={dayHour.end_time}
+                        onChange={(e) => updateWorkingHour(day.id, 'end_time', e.target.value)}
                         className="w-32"
                       />
                     </div>
                   </div>
                 )}
                 
-                {!dayHour.isActive && (
+                {!dayHour.is_active && (
                   <div className="text-gray-500 text-sm">
                     Fechado
                   </div>

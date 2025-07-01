@@ -4,60 +4,107 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../../contexts/AuthContext';
-import { Appointment, Service } from '../../types';
+import { supabase } from '../../integrations/supabase/client';
 import { Calendar, Clock, User, Phone, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+
+interface Appointment {
+  id: string;
+  barber_id: string;
+  service_id: string;
+  client_name: string;
+  client_phone: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  created_at: string;
+  services?: {
+    name: string;
+    duration: number;
+    price: number;
+  };
+}
 
 export const AppointmentsList: React.FC = () => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    loadData();
+    if (user) {
+      loadAppointments();
+    }
   }, [user, selectedDate]);
 
-  const loadData = () => {
+  const loadAppointments = async () => {
     if (!user) return;
     
-    // Carregar agendamentos
-    const allAppointments = JSON.parse(localStorage.getItem('barbertime_appointments') || '[]');
-    const userAppointments = allAppointments.filter((apt: Appointment) => 
-      apt.barberId === user.id && apt.date === selectedDate
-    );
-    
-    // Carregar serviços
-    const allServices = JSON.parse(localStorage.getItem('barbertime_services') || '[]');
-    const userServices = allServices.filter((service: Service) => service.barberId === user.id);
-    
-    // Combinar dados
-    const appointmentsWithServices = userAppointments.map((apt: Appointment) => ({
-      ...apt,
-      service: userServices.find((s: Service) => s.id === apt.serviceId)
-    }));
-    
-    // Ordenar por horário
-    appointmentsWithServices.sort((a, b) => a.time.localeCompare(b.time));
-    
-    setAppointments(appointmentsWithServices);
-    setServices(userServices);
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          services (
+            name,
+            duration,
+            price
+          )
+        `)
+        .eq('barber_id', user.id)
+        .eq('appointment_date', selectedDate)
+        .order('appointment_time');
+
+      if (error) {
+        console.error('Error loading appointments:', error);
+        toast({
+          title: "Erro ao carregar agendamentos",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setAppointments(data || []);
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateAppointmentStatus = (appointmentId: string, status: 'completed' | 'cancelled') => {
-    const allAppointments = JSON.parse(localStorage.getItem('barbertime_appointments') || '[]');
-    const updatedAppointments = allAppointments.map((apt: Appointment) => 
-      apt.id === appointmentId ? { ...apt, status } : apt
-    );
-    
-    localStorage.setItem('barbertime_appointments', JSON.stringify(updatedAppointments));
-    loadData();
-    
-    const statusText = status === 'completed' ? 'concluído' : 'cancelado';
-    toast({
-      title: `Agendamento ${statusText}!`,
-      description: `O agendamento foi marcado como ${statusText}.`,
-    });
+  const updateAppointmentStatus = async (appointmentId: string, status: 'completed' | 'cancelled') => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status })
+        .eq('id', appointmentId);
+
+      if (error) {
+        console.error('Error updating appointment:', error);
+        toast({
+          title: "Erro ao atualizar agendamento",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      loadAppointments();
+      
+      const statusText = status === 'completed' ? 'concluído' : 'cancelado';
+      toast({
+        title: `Agendamento ${statusText}!`,
+        description: `O agendamento foi marcado como ${statusText}.`,
+      });
+    } catch (error: any) {
+      console.error('Error updating appointment:', error);
+      toast({
+        title: "Erro ao atualizar agendamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -70,7 +117,7 @@ export const AppointmentsList: React.FC = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString;
+    return timeString.substring(0, 5); // Remove seconds if present
   };
 
   const getStatusBadge = (status: string) => {
@@ -92,6 +139,16 @@ export const AppointmentsList: React.FC = () => {
       currency: 'BRL'
     }).format(price);
   };
+
+  if (loading) {
+    return (
+      <Card className="barber-card">
+        <CardContent className="p-6">
+          <div className="text-center">Carregando agendamentos...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="barber-card">
@@ -145,18 +202,18 @@ export const AppointmentsList: React.FC = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start space-x-3">
                     <div className="w-12 h-12 bg-[#00657C] text-white rounded-full flex items-center justify-center font-semibold">
-                      {appointment.clientName.charAt(0).toUpperCase()}
+                      {appointment.client_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="font-medium text-lg">{appointment.clientName}</h4>
+                      <h4 className="font-medium text-lg">{appointment.client_name}</h4>
                       <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                         <div className="flex items-center space-x-1">
                           <Phone className="w-4 h-4" />
-                          <span>{appointment.clientPhone}</span>
+                          <span>{appointment.client_phone}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="w-4 h-4" />
-                          <span>{formatTime(appointment.time)}</span>
+                          <span>{formatTime(appointment.appointment_time)}</span>
                         </div>
                       </div>
                     </div>
@@ -164,14 +221,14 @@ export const AppointmentsList: React.FC = () => {
                   {getStatusBadge(appointment.status)}
                 </div>
                 
-                {appointment.service && (
+                {appointment.services && (
                   <div className="bg-gray-50 rounded-md p-3 mb-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-medium">{appointment.service.name}</span>
+                        <span className="font-medium">{appointment.services.name}</span>
                         <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                          <span>{appointment.service.duration} minutos</span>
-                          <span>{formatPrice(appointment.service.price)}</span>
+                          <span>{appointment.services.duration} minutos</span>
+                          <span>{formatPrice(appointment.services.price)}</span>
                         </div>
                       </div>
                     </div>

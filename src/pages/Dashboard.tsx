@@ -10,21 +10,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown } from 'lucide-react';
+import { supabase } from '../integrations/supabase/client';
 
 const Dashboard: React.FC = () => {
-  const { user, logout, isTrialExpired } = useAuth();
+  const { user, logout, isTrialExpired, loading } = useAuth();
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState(0);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
-      // Calcular dias restantes do trial
-      const now = new Date();
-      const createdDate = new Date(user.createdAt);
-      const daysPassed = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-      const remaining = Math.max(0, 7 - daysPassed);
-      setDaysRemaining(remaining);
-
+      loadProfile();
+      calculateTrialDays();
+      
       // Verificar se o trial expirou
       if (isTrialExpired()) {
         setShowTrialModal(true);
@@ -32,12 +30,56 @@ const Dashboard: React.FC = () => {
     }
   }, [user, isTrialExpired]);
 
+  const loadProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
+
+  const calculateTrialDays = () => {
+    if (!user?.created_at) return;
+
+    const now = new Date();
+    const createdDate = new Date(user.created_at);
+    const daysPassed = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    const remaining = Math.max(0, 7 - daysPassed);
+    setDaysRemaining(remaining);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-[#00657C] rounded-lg flex items-center justify-center animate-pulse">
+            <Scissors className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return null;
   }
 
   const getPublicBookingUrl = () => {
-    const barberSlug = user.name.toLowerCase().replace(/\s+/g, '-');
+    const barberSlug = (profile?.name || user.email || 'barbeiro').toLowerCase().replace(/\s+/g, '-');
     return `${window.location.origin}/booking/${barberSlug}`;
   };
 
@@ -60,7 +102,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold">BarberTime</h1>
-              <p className="text-sm text-gray-600">Olá, {user.name}!</p>
+              <p className="text-sm text-gray-600">Olá, {profile?.name || user.email}!</p>
             </div>
           </div>
           
@@ -169,7 +211,7 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Nome</label>
-                    <p className="text-lg">{user.name}</p>
+                    <p className="text-lg">{profile?.name || 'Não informado'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Email</label>
@@ -177,12 +219,12 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Telefone</label>
-                    <p className="text-lg">{user.phone}</p>
+                    <p className="text-lg">{profile?.phone || 'Não informado'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Conta criada em</label>
                     <p className="text-lg">
-                      {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                      {new Date(profile?.created_at || user.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 </div>
