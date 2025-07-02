@@ -79,7 +79,16 @@ const Dashboard: React.FC = () => {
   }
 
   const getPublicBookingUrl = () => {
-    const barberSlug = (profile?.name || user.email || 'barbeiro').toLowerCase().replace(/\s+/g, '-');
+    if (!profile?.name) return `${window.location.origin}/booking/barbeiro`;
+    
+    const barberSlug = profile.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .trim();
+    
     return `${window.location.origin}/booking/${barberSlug}`;
   };
 

@@ -6,15 +6,52 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Service, WorkingHours, Appointment, User } from '../../types';
 import { toast } from '@/hooks/use-toast';
 import { Calendar, Clock, User as UserIcon, Phone, Scissors, CheckCircle } from 'lucide-react';
+import { supabase } from '../../integrations/supabase/client';
+
+interface Service {
+  id: string;
+  barber_id: string;
+  name: string;
+  duration: number;
+  price: number;
+  created_at: string;
+}
+
+interface WorkingHour {
+  id: string;
+  barber_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
+
+interface Appointment {
+  id: string;
+  barber_id: string;
+  service_id: string;
+  client_name: string;
+  client_phone: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  created_at: string;
+}
+
+interface Profile {
+  id: string;
+  name: string;
+  phone: string;
+  created_at: string;
+}
 
 export const BookingPage: React.FC = () => {
   const { barberName } = useParams<{ barberName: string }>();
-  const [barber, setBarber] = useState<User | null>(null);
+  const [barber, setBarber] = useState<Profile | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [workingHours, setWorkingHours] = useState<WorkingHours[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -24,63 +61,119 @@ export const BookingPage: React.FC = () => {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   
-  const [currentStep, setCurrentStep] = useState(1); // 1: serviço, 2: data/hora, 3: dados, 4: confirmação
+  const [currentStep, setCurrentStep] = useState(1);
   const [isBookingComplete, setIsBookingComplete] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadBarberData();
   }, [barberName]);
 
   useEffect(() => {
-    if (selectedService && selectedDate) {
+    if (selectedService && selectedDate && barber) {
       calculateAvailableSlots();
     }
-  }, [selectedService, selectedDate, appointments, workingHours]);
+  }, [selectedService, selectedDate, appointments, workingHours, barber]);
 
-  const loadBarberData = () => {
+  const loadBarberData = async () => {
     if (!barberName) return;
     
-    // Buscar barbeiro pelo nome (simulando URL amigável)
-    const users = JSON.parse(localStorage.getItem('barbertime_users') || '[]');
-    const foundBarber = users.find((user: User) => 
-      user.name.toLowerCase().replace(/\s+/g, '-') === barberName.toLowerCase()
-    );
-    
-    if (!foundBarber) {
-      toast({
-        title: "Barbeiro não encontrado",
-        description: "O barbeiro solicitado não foi encontrado.",
-        variant: "destructive",
-      });
-      return;
+    try {
+      setLoading(true);
+      
+      // Buscar barbeiro pelo nome (URL amigável)
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('name', `%${barberName.replace('-', ' ')}%`);
+
+      if (profileError) {
+        console.error('Error loading barber:', profileError);
+        toast({
+          title: "Erro ao carregar barbeiro",
+          description: profileError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!profiles || profiles.length === 0) {
+        toast({
+          title: "Barbeiro não encontrado",
+          description: "O barbeiro solicitado não foi encontrado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const foundBarber = profiles[0];
+      setBarber(foundBarber);
+      
+      // Carregar serviços do barbeiro
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barber_id', foundBarber.id);
+
+      if (servicesError) {
+        console.error('Error loading services:', servicesError);
+      } else {
+        setServices(servicesData || []);
+      }
+      
+      // Carregar horários de funcionamento
+      const { data: workingHoursData, error: workingHoursError } = await supabase
+        .from('working_hours')
+        .select('*')
+        .eq('barber_id', foundBarber.id);
+
+      if (workingHoursError) {
+        console.error('Error loading working hours:', workingHoursError);
+      } else {
+        setWorkingHours(workingHoursData || []);
+      }
+      
+      // Carregar agendamentos existentes para a data selecionada
+      if (selectedDate) {
+        loadAppointments(foundBarber.id);
+      }
+      
+    } catch (error) {
+      console.error('Error loading barber data:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    setBarber(foundBarber);
-    
-    // Carregar serviços do barbeiro
-    const allServices = JSON.parse(localStorage.getItem('barbertime_services') || '[]');
-    const barberServices = allServices.filter((service: Service) => service.barberId === foundBarber.id);
-    setServices(barberServices);
-    
-    // Carregar horários de funcionamento
-    const allWorkingHours = JSON.parse(localStorage.getItem('barbertime_working_hours') || '[]');
-    const barberWorkingHours = allWorkingHours.filter((wh: WorkingHours) => wh.barberId === foundBarber.id);
-    setWorkingHours(barberWorkingHours);
-    
-    // Carregar agendamentos existentes
-    const allAppointments = JSON.parse(localStorage.getItem('barbertime_appointments') || '[]');
-    const barberAppointments = allAppointments.filter((apt: Appointment) => apt.barberId === foundBarber.id);
-    setAppointments(barberAppointments);
+  };
+
+  const loadAppointments = async (barberId: string) => {
+    if (!selectedDate) return;
+
+    try {
+      const { data: appointmentsData, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('barber_id', barberId)
+        .eq('appointment_date', selectedDate)
+        .neq('status', 'cancelled');
+
+      if (error) {
+        console.error('Error loading appointments:', error);
+      } else {
+        setAppointments(appointmentsData || []);
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    }
   };
 
   const calculateAvailableSlots = () => {
-    if (!selectedService || !selectedDate || !workingHours.length) return;
+    if (!selectedService || !selectedDate || !workingHours.length || !barber) return;
     
     const date = new Date(selectedDate + 'T00:00:00');
     const dayOfWeek = date.getDay();
     
     // Encontrar horário de funcionamento para o dia
-    const dayWorkingHour = workingHours.find(wh => wh.dayOfWeek === dayOfWeek && wh.isActive);
+    const dayWorkingHour = workingHours.find(wh => wh.day_of_week === dayOfWeek && wh.is_active);
     
     if (!dayWorkingHour) {
       setAvailableSlots([]);
@@ -89,11 +182,11 @@ export const BookingPage: React.FC = () => {
     
     // Gerar slots de 30 minutos
     const slots: string[] = [];
-    const [startHour, startMinute] = dayWorkingHour.startTime.split(':').map(Number);
-    const [endHour, endMinute] = dayWorkingHour.endTime.split(':').map(Number);
+    const [startHour, startMinute] = dayWorkingHour.start_time.split(':').map(Number);
+    const [endHour, endMinute] = dayWorkingHour.end_time.split(':').map(Number);
     
-    const startTime = startHour * 60 + startMinute; // em minutos
-    const endTime = endHour * 60 + endMinute; // em minutos
+    const startTime = startHour * 60 + startMinute;
+    const endTime = endHour * 60 + endMinute;
     
     for (let time = startTime; time < endTime; time += 30) {
       const hour = Math.floor(time / 60);
@@ -102,10 +195,8 @@ export const BookingPage: React.FC = () => {
       
       // Verificar se o slot não conflita com agendamentos existentes
       const hasConflict = appointments.some(apt => {
-        if (apt.date !== selectedDate || apt.status === 'cancelled') return false;
-        
-        const aptStartTime = apt.time;
-        const aptService = services.find(s => s.id === apt.serviceId);
+        const aptStartTime = apt.appointment_time;
+        const aptService = services.find(s => s.id === apt.service_id);
         if (!aptService) return false;
         
         const [aptHour, aptMinute] = aptStartTime.split(':').map(Number);
@@ -132,11 +223,15 @@ export const BookingPage: React.FC = () => {
 
   const handleDateTimeSelect = () => {
     if (selectedDate && selectedTime) {
+      // Recarregar agendamentos para a data selecionada
+      if (barber) {
+        loadAppointments(barber.id);
+      }
       setCurrentStep(3);
     }
   };
 
-  const handleBooking = (e: React.FormEvent) => {
+  const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedService || !selectedDate || !selectedTime || !clientName || !clientPhone || !barber) {
@@ -148,31 +243,45 @@ export const BookingPage: React.FC = () => {
       return;
     }
     
-    // Criar novo agendamento
-    const newAppointment: Appointment = {
-      id: Date.now().toString(),
-      barberId: barber.id,
-      serviceId: selectedService.id,
-      clientName,
-      clientPhone,
-      date: selectedDate,
-      time: selectedTime,
-      status: 'scheduled',
-      createdAt: new Date()
-    };
-    
-    // Salvar no localStorage
-    const allAppointments = JSON.parse(localStorage.getItem('barbertime_appointments') || '[]');
-    allAppointments.push(newAppointment);
-    localStorage.setItem('barbertime_appointments', JSON.stringify(allAppointments));
-    
-    setIsBookingComplete(true);
-    setCurrentStep(4);
-    
-    toast({
-      title: "Agendamento confirmado!",
-      description: "Seu horário foi agendado com sucesso.",
-    });
+    try {
+      // Criar novo agendamento no Supabase
+      const { error } = await supabase
+        .from('appointments')
+        .insert({
+          barber_id: barber.id,
+          service_id: selectedService.id,
+          client_name: clientName,
+          client_phone: clientPhone,
+          appointment_date: selectedDate,
+          appointment_time: selectedTime,
+          status: 'scheduled'
+        });
+
+      if (error) {
+        console.error('Error creating appointment:', error);
+        toast({
+          title: "Erro ao criar agendamento",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsBookingComplete(true);
+      setCurrentStep(4);
+      
+      toast({
+        title: "Agendamento confirmado!",
+        description: "Seu horário foi agendado com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Error creating appointment:', error);
+      toast({
+        title: "Erro ao criar agendamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -196,6 +305,19 @@ export const BookingPage: React.FC = () => {
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 30);
   const maxDateString = maxDate.toISOString().split('T')[0];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center animate-pulse">
+            <Scissors className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!barber) {
     return (
@@ -355,7 +477,10 @@ export const BookingPage: React.FC = () => {
                   id="date"
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedTime(''); // Limpar horário selecionado
+                  }}
                   min={today}
                   max={maxDateString}
                   className="w-full"

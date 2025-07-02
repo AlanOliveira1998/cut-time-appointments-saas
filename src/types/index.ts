@@ -10,33 +10,33 @@ export interface User {
 
 export interface Service {
   id: string;
-  barberId: string;
+  barber_id: string; // Mudança: barberId -> barber_id para consistência com DB
   name: string;
   duration: number; // em minutos
   price: number;
-  createdAt: Date;
+  created_at: string; // Mudança: createdAt -> created_at
 }
 
 export interface WorkingHours {
   id: string;
-  barberId: string;
-  dayOfWeek: number; // 0-6 (domingo-sábado)
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  isActive: boolean;
+  barber_id: string; // Mudança: barberId -> barber_id
+  day_of_week: number; // Mudança: dayOfWeek -> day_of_week (0-6, domingo-sábado)
+  start_time: string; // Mudança: startTime -> start_time (HH:mm)
+  end_time: string; // Mudança: endTime -> end_time (HH:mm)
+  is_active: boolean; // Mudança: isActive -> is_active
 }
 
 export interface Appointment {
   id: string;
-  barberId: string;
-  serviceId: string;
-  clientName: string;
-  clientPhone: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  barber_id: string; // Mudança: barberId -> barber_id
+  service_id: string; // Mudança: serviceId -> service_id
+  client_name: string; // Mudança: clientName -> client_name
+  client_phone: string; // Mudança: clientPhone -> client_phone
+  appointment_date: string; // Mudança: date -> appointment_date (YYYY-MM-DD)
+  appointment_time: string; // Mudança: time -> appointment_time (HH:mm)
   status: 'scheduled' | 'completed' | 'cancelled';
-  createdAt: Date;
-  service?: Service;
+  created_at: string; // Mudança: createdAt -> created_at
+  services?: Service; // Relação opcional com serviços
 }
 
 export interface AuthContextType {
@@ -50,9 +50,9 @@ export interface AuthContextType {
 }
 
 export interface BookingFormData {
-  serviceId: string;
-  date: string;
-  time: string;
-  clientName: string;
-  clientPhone: string;
+  service_id: string; // Mudança: serviceId -> service_id
+  appointment_date: string; // Mudança: date -> appointment_date
+  appointment_time: string; // Mudança: time -> appointment_time
+  client_name: string; // Mudança: clientName -> client_name
+  client_phone: string; // Mudança: clientPhone -> client_phone
 }
