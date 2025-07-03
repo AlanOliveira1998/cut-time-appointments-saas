@@ -92,7 +92,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               </div>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">BARBERSHOP</h1>
+          <h1 className="text-2xl font-bold text-slate-800">BarberTime</h1>
         </div>
         <h2 className="text-3xl font-bold text-slate-800 mb-2">Criar Conta</h2>
       </div>
