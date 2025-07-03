@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import { BookingPage } from "./components/booking/BookingPage";
+import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,10 @@ const AppRoutes: React.FC = () => {
       <Route 
         path="/booking/:barberName" 
         element={<BookingPage />} 
+      />
+      <Route 
+        path="/booking" 
+        element={<Booking />} 
       />
       <Route 
         path="/" 
