@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,12 +79,19 @@ export const BookingPage: React.FC = () => {
     
     try {
       setLoading(true);
+      console.log('Carregando dados do barbeiro:', barberName);
       
       // Buscar barbeiro pelo nome (URL amigável)
+      // Convertendo o nome da URL de volta para busca
+      const searchName = barberName.replace(/-/g, ' ');
+      console.log('Nome de busca:', searchName);
+      
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('name', `%${barberName.replace('-', ' ')}%`);
+        .ilike('name', `%${searchName}%`);
+
+      console.log('Resultado da busca de profiles:', profiles, profileError);
 
       if (profileError) {
         console.error('Error loading barber:', profileError);
@@ -98,6 +104,7 @@ export const BookingPage: React.FC = () => {
       }
 
       if (!profiles || profiles.length === 0) {
+        console.log('Nenhum barbeiro encontrado');
         toast({
           title: "Barbeiro não encontrado",
           description: "O barbeiro solicitado não foi encontrado.",
@@ -107,6 +114,7 @@ export const BookingPage: React.FC = () => {
       }
 
       const foundBarber = profiles[0];
+      console.log('Barbeiro encontrado:', foundBarber);
       setBarber(foundBarber);
       
       // Carregar serviços do barbeiro
@@ -114,6 +122,8 @@ export const BookingPage: React.FC = () => {
         .from('services')
         .select('*')
         .eq('barber_id', foundBarber.id);
+
+      console.log('Serviços carregados:', servicesData, servicesError);
 
       if (servicesError) {
         console.error('Error loading services:', servicesError);
@@ -127,19 +137,21 @@ export const BookingPage: React.FC = () => {
         .select('*')
         .eq('barber_id', foundBarber.id);
 
+      console.log('Horários carregados:', workingHoursData, workingHoursError);
+
       if (workingHoursError) {
         console.error('Error loading working hours:', workingHoursError);
       } else {
         setWorkingHours(workingHoursData || []);
       }
       
-      // Carregar agendamentos existentes para a data selecionada
-      if (selectedDate) {
-        loadAppointments(foundBarber.id);
-      }
-      
     } catch (error) {
       console.error('Error loading barber data:', error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Ocorreu um erro ao carregar os dados do barbeiro.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -149,12 +161,16 @@ export const BookingPage: React.FC = () => {
     if (!selectedDate) return;
 
     try {
+      console.log('Carregando agendamentos para:', barberId, selectedDate);
+      
       const { data: appointmentsData, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('barber_id', barberId)
         .eq('appointment_date', selectedDate)
         .neq('status', 'cancelled');
+
+      console.log('Agendamentos carregados:', appointmentsData, error);
 
       if (error) {
         console.error('Error loading appointments:', error);
@@ -244,6 +260,15 @@ export const BookingPage: React.FC = () => {
     }
     
     try {
+      console.log('Criando agendamento:', {
+        barber_id: barber.id,
+        service_id: selectedService.id,
+        client_name: clientName,
+        client_phone: clientPhone,
+        appointment_date: selectedDate,
+        appointment_time: selectedTime
+      });
+
       // Criar novo agendamento no Supabase
       const { error } = await supabase
         .from('appointments')
