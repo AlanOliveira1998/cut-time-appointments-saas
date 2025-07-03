@@ -101,24 +101,24 @@ export const BarbersList: React.FC = () => {
           description: "Barbeiro atualizado com sucesso",
         });
       } else {
+        // Criar novo perfil primeiro
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: crypto.randomUUID(),
+            name: formData.name,
+            phone: formData.phone
+          }])
+          .select()
+          .single();
+
+        if (profileError) throw profileError;
+
         // Criar novo barbeiro
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: `barber_${Date.now()}@barbershop.com`,
-          password: 'temp123456',
-          options: {
-            data: {
-              name: formData.name,
-              phone: formData.phone
-            }
-          }
-        });
-
-        if (authError) throw authError;
-
         const { error: barberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: authData.user?.id,
+            profile_id: profileData.id,
             specialty: formData.specialty,
             experience_years: formData.experience_years,
             is_active: formData.is_active
