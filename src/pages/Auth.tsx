@@ -12,13 +12,6 @@ const Auth: React.FC = () => {
 
   return (
     <div className="min-h-screen auth-background flex items-center justify-center p-4">
-      {/* Floating animated shapes */}
-      <div className="floating-shapes">
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
-      </div>
-      
       <div className="w-full max-w-md relative z-10">
         <div className="animate-fade-in-up">
           {isLogin ? (

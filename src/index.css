@@ -107,7 +107,10 @@
 
 @layer components {
   .auth-background {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    background-image: url('../assets/barber-background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     position: relative;
     overflow: hidden;
   }
@@ -119,9 +122,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
-      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M30 15c8.284 0 15 6.716 15 15s-6.716 15-15 15-15-6.716-15-15 6.716-15 15-15zm0 2c-7.18 0-13 5.82-13 13s5.82 13 13 13 13-5.82 13-13-5.82-13-13-13z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.1;
+    background: rgba(0, 0, 0, 0.6);
   }
 
   .glass-card {
@@ -131,56 +132,6 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   }
 
-  .floating-shapes {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none;
-  }
-
-  .floating-shape {
-    position: absolute;
-    border-radius: 50%;
-    animation: float 6s ease-in-out infinite;
-    opacity: 0.1;
-  }
-
-  .floating-shape:nth-child(1) {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-    top: 20%;
-    left: 10%;
-    animation-delay: -1s;
-  }
-
-  .floating-shape:nth-child(2) {
-    width: 120px;
-    height: 120px;
-    background: linear-gradient(45deg, #06b6d4, #3b82f6);
-    top: 60%;
-    right: 10%;
-    animation-delay: -3s;
-  }
-
-  .floating-shape:nth-child(3) {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(45deg, #8b5cf6, #ec4899);
-    top: 80%;
-    left: 20%;
-    animation-delay: -2s;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px) rotate(0deg);
-    }
-    50% {
-      transform: translateY(-20px) rotate(180deg);
-    }
-  }
 
   .barber-gradient {
     background: linear-gradient(135deg, #004E64 0%, #003A4A 100%);
