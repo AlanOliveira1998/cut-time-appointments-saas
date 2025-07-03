@@ -8,6 +8,20 @@ export interface User {
   isActive: boolean;
 }
 
+export interface Barber {
+  id: string;
+  profile_id: string;
+  specialty?: string;
+  experience_years: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    name: string;
+    phone?: string;
+  };
+}
+
 export interface Service {
   id: string;
   barber_id: string; // Mudança: barberId -> barber_id para consistência com DB

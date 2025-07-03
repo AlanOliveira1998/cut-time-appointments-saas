@@ -60,6 +60,44 @@ export type Database = {
           },
         ]
       }
+      barbers: {
+        Row: {
+          created_at: string | null
+          experience_years: number | null
+          id: string
+          is_active: boolean | null
+          profile_id: string
+          specialty: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean | null
+          profile_id: string
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean | null
+          profile_id?: string
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null

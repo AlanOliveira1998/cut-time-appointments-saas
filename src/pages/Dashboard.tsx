@@ -4,12 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { TrialExpiredModal } from '../components/TrialExpiredModal';
 import { ServicesList } from '../components/dashboard/ServicesList';
 import { WorkingHoursList } from '../components/dashboard/WorkingHoursList';
+import { BarbersList } from '../components/dashboard/BarbersList';
 import { AppointmentsList } from '../components/dashboard/AppointmentsList';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown } from 'lucide-react';
+import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
 
 const Dashboard: React.FC = () => {
@@ -174,7 +175,7 @@ const Dashboard: React.FC = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="agenda" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="agenda" className="flex items-center space-x-2">
               <Calendar className="w-4 h-4" />
               <span>Agenda</span>
@@ -186,6 +187,10 @@ const Dashboard: React.FC = () => {
             <TabsTrigger value="hours" className="flex items-center space-x-2">
               <Clock className="w-4 h-4" />
               <span>Horários</span>
+            </TabsTrigger>
+            <TabsTrigger value="barbers" className="flex items-center space-x-2">
+              <Users className="w-4 h-4" />
+              <span>Barbeiros</span>
             </TabsTrigger>
             <TabsTrigger value="profile" className="flex items-center space-x-2">
               <User className="w-4 h-4" />
@@ -203,6 +208,10 @@ const Dashboard: React.FC = () => {
 
           <TabsContent value="hours">
             <WorkingHoursList />
+          </TabsContent>
+
+          <TabsContent value="barbers">
+            <BarbersList />
           </TabsContent>
 
           <TabsContent value="profile">
