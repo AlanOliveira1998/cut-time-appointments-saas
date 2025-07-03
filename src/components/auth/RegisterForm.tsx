@@ -94,7 +94,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           </div>
           <h1 className="text-2xl font-bold text-slate-800">BARBERSHOP</h1>
         </div>
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">Create Account</h2>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">Criar Conta</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,7 +103,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             id="name"
             name="name"
             type="text"
-            placeholder="Full Name"
+            placeholder="Nome Completo"
             value={formData.name}
             onChange={handleChange}
             className="w-full modern-input"
@@ -116,7 +116,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             id="email"
             name="email"
             type="email"
-            placeholder="Email Address"
+            placeholder="Endereço de Email"
             value={formData.email}
             onChange={handleChange}
             className="w-full modern-input"
@@ -129,7 +129,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             id="phone"
             name="phone"
             type="tel"
-            placeholder="Phone Number"
+            placeholder="Número de Telefone"
             value={formData.phone}
             onChange={handleChange}
             className="w-full modern-input"
@@ -142,7 +142,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
-            placeholder="Password (min 6 characters)"
+            placeholder="Senha (mín. 6 caracteres)"
             value={formData.password}
             onChange={handleChange}
             className="w-full modern-input pr-12"
@@ -163,7 +163,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             id="confirmPassword"
             name="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm Password"
+            placeholder="Confirmar Senha"
             value={formData.confirmPassword}
             onChange={handleChange}
             className="w-full modern-input pr-12"
@@ -183,18 +183,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors duration-200"
           disabled={isLoading}
         >
-          {isLoading ? 'Creating Account...' : 'Create Account'}
+          {isLoading ? 'Criando Conta...' : 'Criar Conta'}
         </button>
       </form>
 
       <div className="mt-6 text-center">
         <div className="border-t border-gray-200 pt-4">
-          <span className="text-slate-600">Already have an account? </span>
+          <span className="text-slate-600">Já tem uma conta? </span>
           <button
             onClick={onToggleMode}
             className="text-slate-600 hover:text-slate-800 transition-colors font-semibold"
           >
-            Login
+            Entrar
           </button>
         </div>
       </div>

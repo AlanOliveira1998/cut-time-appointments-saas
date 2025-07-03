@@ -61,7 +61,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
           </div>
           <h1 className="text-2xl font-bold text-slate-800">BARBERSHOP</h1>
         </div>
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">Login</h2>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">Entrar</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -70,7 +70,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             <input
               id="email"
               type="email"
-              placeholder="Email Address"
+              placeholder="Endereço de Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full modern-input"
@@ -82,7 +82,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="Senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full modern-input pr-12"
@@ -103,13 +103,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors duration-200"
           disabled={isLoading}
         >
-          {isLoading ? 'Entrando...' : 'Login'}
+          {isLoading ? 'Entrando...' : 'Entrar'}
         </button>
       </form>
 
       <div className="mt-6 text-center space-y-4">
         <button className="text-slate-600 hover:text-slate-800 transition-colors">
-          Forgot password?
+          Esqueceu a senha?
         </button>
         
         <div className="border-t border-gray-200 pt-4">
@@ -117,7 +117,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             onClick={onToggleMode}
             className="text-slate-600 hover:text-slate-800 transition-colors"
           >
-            Create account
+            Criar conta
           </button>
         </div>
       </div>
