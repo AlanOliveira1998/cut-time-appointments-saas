@@ -41,6 +41,20 @@ export const AppointmentsList: React.FC = () => {
     if (!user) return;
     
     try {
+      // Buscar o barbeiro do usuário atual
+      const { data: barberData, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (barberError || !barberData) {
+        console.error('Error finding barber:', barberError);
+        setAppointments([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -51,7 +65,7 @@ export const AppointmentsList: React.FC = () => {
             price
           )
         `)
-        .eq('barber_id', user.id)
+        .eq('barber_id', barberData.id)
         .eq('appointment_date', selectedDate)
         .order('appointment_time');
 

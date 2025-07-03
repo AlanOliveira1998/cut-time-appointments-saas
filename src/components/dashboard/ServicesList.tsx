@@ -42,10 +42,40 @@ export const ServicesList: React.FC = () => {
     if (!user) return;
     
     try {
+      // Buscar o barbeiro do usuário atual
+      const { data: barberData, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (barberError || !barberData) {
+        // Se não existe barbeiro, criar um
+        const { data: newBarber, error: createBarberError } = await supabase
+          .from('barbers')
+          .insert([{
+            profile_id: user.id,
+            specialty: 'Geral',
+            experience_years: 0,
+            is_active: true
+          }])
+          .select()
+          .single();
+
+        if (createBarberError) {
+          console.error('Error creating barber:', createBarberError);
+          setServices([]);
+          return;
+        }
+
+        setServices([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barber_id', user.id)
+        .eq('barber_id', barberData.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -90,11 +120,22 @@ export const ServicesList: React.FC = () => {
           description: "O serviço foi atualizado com sucesso.",
         });
       } else {
+        // Buscar o barbeiro do usuário
+        const { data: barberData, error: barberError } = await supabase
+          .from('barbers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .single();
+
+        if (barberError || !barberData) {
+          throw new Error('Barbeiro não encontrado');
+        }
+
         // Criar novo serviço
         const { error } = await supabase
           .from('services')
           .insert({
-            barber_id: user.id,
+            barber_id: barberData.id,
             name: formData.name,
             duration: parseInt(formData.duration),
             price: parseFloat(formData.price)

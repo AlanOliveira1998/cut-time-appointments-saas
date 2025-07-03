@@ -48,7 +48,7 @@ export type Database = {
             foreignKeyName: "appointments_barber_id_fkey"
             columns: ["barber_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "barbers"
             referencedColumns: ["id"]
           },
           {
@@ -152,7 +152,7 @@ export type Database = {
             foreignKeyName: "services_barber_id_fkey"
             columns: ["barber_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "barbers"
             referencedColumns: ["id"]
           },
         ]
@@ -187,7 +187,7 @@ export type Database = {
             foreignKeyName: "working_hours_barber_id_fkey"
             columns: ["barber_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "barbers"
             referencedColumns: ["id"]
           },
         ]

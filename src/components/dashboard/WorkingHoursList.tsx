@@ -44,10 +44,39 @@ export const WorkingHoursList: React.FC = () => {
     if (!user) return;
     
     try {
+      // Primeiro, verificar se o usuário tem um barbeiro associado
+      const { data: barberData, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (barberError || !barberData) {
+        // Se não existe barbeiro, criar um
+        const { data: newBarber, error: createBarberError } = await supabase
+          .from('barbers')
+          .insert([{
+            profile_id: user.id,
+            specialty: 'Geral',
+            experience_years: 0,
+            is_active: true
+          }])
+          .select()
+          .single();
+
+        if (createBarberError) {
+          console.error('Error creating barber:', createBarberError);
+          return;
+        }
+
+        await createDefaultWorkingHours(newBarber.id);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('working_hours')
         .select('*')
-        .eq('barber_id', user.id)
+        .eq('barber_id', barberData.id)
         .order('day_of_week');
 
       if (error) {
@@ -57,7 +86,7 @@ export const WorkingHoursList: React.FC = () => {
 
       // Se não existir horários, criar padrão
       if (!data || data.length === 0) {
-        await createDefaultWorkingHours();
+        await createDefaultWorkingHours(barberData.id);
       } else {
         setWorkingHours(data);
       }
@@ -68,11 +97,9 @@ export const WorkingHoursList: React.FC = () => {
     }
   };
 
-  const createDefaultWorkingHours = async () => {
-    if (!user) return;
-
+  const createDefaultWorkingHours = async (barberId: string) => {
     const defaultHours = DAYS_OF_WEEK.map(day => ({
-      barber_id: user.id,
+      barber_id: barberId,
       day_of_week: day.id,
       start_time: '08:00',
       end_time: day.id === 0 ? '17:00' : '18:00',
@@ -100,10 +127,22 @@ export const WorkingHoursList: React.FC = () => {
     if (!user) return;
 
     try {
+      // Buscar o ID do barbeiro baseado no profile_id
+      const { data: barberData, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (barberError || !barberData) {
+        console.error('Error finding barber:', barberError);
+        return;
+      }
+
       const { error } = await supabase
         .from('working_hours')
         .update({ [field]: value })
-        .eq('barber_id', user.id)
+        .eq('barber_id', barberData.id)
         .eq('day_of_week', dayOfWeek);
 
       if (error) {
