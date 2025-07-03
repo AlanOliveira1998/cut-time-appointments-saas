@@ -131,17 +131,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
+      // Limpar estado local primeiro
+      setSession(null);
+      setUser(null);
+      
+      // Limpar localStorage do Supabase
+      const keys = Object.keys(localStorage).filter(key => 
+        key.startsWith('supabase.') || key.includes('sb-')
+      );
+      keys.forEach(key => localStorage.removeItem(key));
+      
+      // Tentar signOut apenas se há uma sessão
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error && error.message !== 'Auth session missing!') {
+          console.error('Logout error:', error);
+        }
       }
       
       toast({
         title: "Logout realizado",
         description: "Até logo!",
       });
-    } catch (error) {
+      
+      // Forçar redirecionamento para página inicial
+      window.location.href = '/';
+    } catch (error: any) {
       console.error('Logout error:', error);
+      // Mesmo com erro, limpar estado e redirecionar
+      setSession(null);
+      setUser(null);
+      window.location.href = '/';
     }
   };
 
