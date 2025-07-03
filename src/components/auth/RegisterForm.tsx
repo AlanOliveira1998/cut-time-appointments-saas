@@ -80,127 +80,107 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   };
 
   return (
-    <div className="glass-card rounded-2xl p-8 backdrop-blur-xl">
+    <div className="glass-card rounded-2xl p-8 backdrop-blur-xl max-w-md w-full">
       <div className="text-center mb-8">
-        <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-white/10 backdrop-blur-sm rounded-2xl">
-          <img 
-            src="/lovable-uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
-            alt="BarberTime Logo" 
-            className="w-12 h-12 object-contain"
-          />
+        <div className="flex items-center justify-center mb-6">
+          <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mr-3">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <div className="w-6 h-6 bg-slate-800 rounded-full relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-white to-blue-500 rounded-full transform rotate-45"></div>
+              </div>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">BARBERSHOP</h1>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Criar Conta</h1>
-        <p className="text-white/70">
-          Comece seu período gratuito de 7 dias
-        </p>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">Create Account</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor="name" className="text-white/90 font-medium">Nome completo</label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
-            <input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Seu nome completo"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full modern-input pl-12"
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Full Name"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full modern-input"
+            required
+          />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-white/90 font-medium">Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full modern-input pl-12"
-              required
-            />
-          </div>
+        <div>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="Email Address"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full modern-input"
+            required
+          />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="phone" className="text-white/90 font-medium">Telefone</label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="(11) 99999-9999"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full modern-input pl-12"
-              required
-            />
-          </div>
+        <div>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            placeholder="Phone Number"
+            value={formData.phone}
+            onChange={handleChange}
+            className="w-full modern-input"
+            required
+          />
         </div>
         
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-white/90 font-medium">Senha</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
-            <input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full modern-input pl-12"
-              required
-              minLength={6}
-            />
-          </div>
+        <div>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="Password (min 6 characters)"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full modern-input"
+            required
+            minLength={6}
+          />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="text-white/90 font-medium">Confirmar senha</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirme sua senha"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="w-full modern-input pl-12"
-              required
-            />
-          </div>
+        <div>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            placeholder="Confirm Password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className="w-full modern-input"
+            required
+          />
         </div>
 
         <button 
           type="submit" 
-          className="w-full barber-button-primary py-4 text-lg font-semibold"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors duration-200"
           disabled={isLoading}
         >
-          {isLoading ? 'Criando conta...' : 'Criar conta'}
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
 
-      <div className="mt-8 text-center">
-        <p className="text-white/70">
-          Já tem uma conta?{' '}
+      <div className="mt-6 text-center">
+        <div className="border-t border-gray-200 pt-4">
+          <span className="text-slate-600">Already have an account? </span>
           <button
             onClick={onToggleMode}
-            className="text-white font-semibold hover:text-white/80 transition-colors"
+            className="text-slate-600 hover:text-slate-800 transition-colors font-semibold"
           >
-            Fazer login
+            Login
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );
