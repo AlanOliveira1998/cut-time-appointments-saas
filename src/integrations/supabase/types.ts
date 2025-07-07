@@ -215,7 +215,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_create_barber: {
+        Args: { user_id: string; new_role: string }
+        Returns: boolean
+      }
+      is_barber_owner: {
+        Args: { user_id: string; target_barber_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
