@@ -18,6 +18,8 @@ interface Barber {
   specialty?: string;
   experience_years: number;
   is_active: boolean;
+  owner_id?: string;
+  role: 'owner' | 'employee';
   profiles: {
     name: string;
     phone?: string;
@@ -65,7 +67,7 @@ export const BarbersList: React.FC = () => {
       }
       
       console.log('✅ Barbeiros carregados com sucesso:', data?.length || 0);
-      setBarbers(data || []);
+      setBarbers((data || []) as Barber[]);
     } catch (error: any) {
       console.error('💥 Erro crítico ao buscar barbeiros:', error);
       toast({
@@ -154,6 +156,14 @@ export const BarbersList: React.FC = () => {
 
         console.log('✅ Profile criado com sucesso:', profileData);
 
+        // Buscar o barbeiro owner atual
+        const { data: ownerBarber } = await supabase
+          .from('barbers')
+          .select('id')
+          .eq('profile_id', user?.id)
+          .eq('role', 'owner')
+          .single();
+
         // Criar novo barbeiro
         console.log('💼 Criando novo barbeiro...');
         const { data: barberData, error: barberError } = await supabase
@@ -162,7 +172,9 @@ export const BarbersList: React.FC = () => {
             profile_id: profileData.id,
             specialty: formData.specialty,
             experience_years: formData.experience_years,
-            is_active: formData.is_active
+            is_active: formData.is_active,
+            role: 'employee',
+            owner_id: ownerBarber?.id
           }])
           .select()
           .single();
@@ -435,9 +447,14 @@ export const BarbersList: React.FC = () => {
                     <CardDescription>{barber.profiles.phone || 'Sem telefone'}</CardDescription>
                   </div>
                 </div>
-                <Badge variant={barber.is_active ? "default" : "secondary"}>
-                  {barber.is_active ? 'Ativo' : 'Inativo'}
-                </Badge>
+                <div className="flex space-x-1">
+                  <Badge variant={barber.role === 'owner' ? "default" : "outline"}>
+                    {barber.role === 'owner' ? 'Dono' : 'Funcionário'}
+                  </Badge>
+                  <Badge variant={barber.is_active ? "default" : "secondary"}>
+                    {barber.is_active ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
