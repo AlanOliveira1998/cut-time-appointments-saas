@@ -74,7 +74,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           owner_id: string | null
-          profile_id: string
+          profile_id: string | null
           role: string | null
           specialty: string | null
           updated_at: string | null
@@ -87,7 +87,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           owner_id?: string | null
-          profile_id: string
+          profile_id?: string | null
           role?: string | null
           specialty?: string | null
           updated_at?: string | null
@@ -100,7 +100,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           owner_id?: string | null
-          profile_id?: string
+          profile_id?: string | null
           role?: string | null
           specialty?: string | null
           updated_at?: string | null
