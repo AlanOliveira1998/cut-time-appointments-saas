@@ -68,6 +68,8 @@ export type Database = {
       barbers: {
         Row: {
           created_at: string | null
+          employee_name: string | null
+          employee_phone: string | null
           experience_years: number | null
           id: string
           is_active: boolean | null
@@ -79,6 +81,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          employee_name?: string | null
+          employee_phone?: string | null
           experience_years?: number | null
           id?: string
           is_active?: boolean | null
@@ -90,6 +94,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          employee_name?: string | null
+          employee_phone?: string | null
           experience_years?: number | null
           id?: string
           is_active?: boolean | null

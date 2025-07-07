@@ -130,7 +130,7 @@ export const BarbersList: React.FC = () => {
         // Buscar o barbeiro owner atual
         const { data: ownerBarber, error: ownerError } = await supabase
           .from('barbers')
-          .select('id')
+          .select('id, profile_id')
           .eq('profile_id', user?.id)
           .eq('role', 'owner')
           .single();
@@ -147,7 +147,7 @@ export const BarbersList: React.FC = () => {
         const { data: barberData, error: barberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: ownerBarber.id, // Usar o ID do barbeiro owner como referência
+            profile_id: ownerBarber.profile_id, // Usar o profile_id do barbeiro owner como referência
             specialty: formData.specialty,
             experience_years: formData.experience_years,
             is_active: formData.is_active,
