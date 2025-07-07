@@ -14,16 +14,18 @@ import { Plus, Edit, Trash2, User } from 'lucide-react';
 
 interface Barber {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   specialty?: string;
   experience_years: number;
   is_active: boolean;
   owner_id?: string;
   role: 'owner' | 'employee';
-  profiles: {
+  employee_name?: string;
+  employee_phone?: string;
+  profiles?: {
     name: string;
     phone?: string;
-  };
+  } | null;
 }
 
 export const BarbersList: React.FC = () => {
@@ -219,8 +221,8 @@ export const BarbersList: React.FC = () => {
     console.log('✏️ Editando barbeiro:', barber);
     setEditingBarber(barber);
     setFormData({
-      name: barber.profiles.name,
-      phone: barber.profiles.phone || '',
+      name: barber.profiles?.name || barber.employee_name || '',
+      phone: barber.profiles?.phone || barber.employee_phone || '',
       specialty: barber.specialty || '',
       experience_years: barber.experience_years,
       is_active: barber.is_active
@@ -416,8 +418,12 @@ export const BarbersList: React.FC = () => {
                     <User className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-base">{barber.profiles.name}</CardTitle>
-                    <CardDescription>{barber.profiles.phone || 'Sem telefone'}</CardDescription>
+                    <CardTitle className="text-base">
+                      {barber.profiles?.name || barber.employee_name || 'Nome não informado'}
+                    </CardTitle>
+                    <CardDescription>
+                      {barber.profiles?.phone || barber.employee_phone || 'Sem telefone'}
+                    </CardDescription>
                   </div>
                 </div>
                 <div className="flex space-x-1">
