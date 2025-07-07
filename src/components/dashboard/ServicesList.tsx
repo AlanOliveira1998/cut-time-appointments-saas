@@ -42,28 +42,30 @@ export const ServicesList: React.FC = () => {
     if (!user) return;
     
     try {
-      // Buscar o barbeiro do usuário atual
-      const { data: barberData, error: barberError } = await supabase
+      // Buscar o barbeiro owner do usuário atual
+      const { data: ownerBarber, error: barberError } = await supabase
         .from('barbers')
         .select('id')
         .eq('profile_id', user.id)
+        .eq('role', 'owner')
         .single();
 
-      if (barberError || !barberData) {
-        // Se não existe barbeiro, criar um
-        const { data: newBarber, error: createBarberError } = await supabase
+      if (barberError || !ownerBarber) {
+        // Se não existe barbeiro owner, criar um
+        const { data: newOwnerBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
             profile_id: user.id,
             specialty: 'Geral',
             experience_years: 0,
-            is_active: true
+            is_active: true,
+            role: 'owner'
           }])
           .select()
           .single();
 
         if (createBarberError) {
-          console.error('Error creating barber:', createBarberError);
+          console.error('Error creating owner barber:', createBarberError);
           setServices([]);
           return;
         }
@@ -72,10 +74,24 @@ export const ServicesList: React.FC = () => {
         return;
       }
 
+      // Buscar todos os barbeiros da barbearia (owner + funcionários)
+      const { data: allBarbers, error: allBarbersError } = await supabase
+        .from('barbers')
+        .select('id')
+        .or(`id.eq.${ownerBarber.id},owner_id.eq.${ownerBarber.id}`);
+
+      if (allBarbersError) {
+        console.error('Error loading barbers:', allBarbersError);
+        setServices([]);
+        return;
+      }
+
+      const barberIds = allBarbers?.map(b => b.id) || [ownerBarber.id];
+
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barber_id', barberData.id)
+        .in('barber_id', barberIds)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -120,22 +136,23 @@ export const ServicesList: React.FC = () => {
           description: "O serviço foi atualizado com sucesso.",
         });
       } else {
-        // Buscar o barbeiro do usuário
-        const { data: barberData, error: barberError } = await supabase
+        // Buscar o barbeiro owner do usuário
+        const { data: ownerBarber, error: barberError } = await supabase
           .from('barbers')
           .select('id')
           .eq('profile_id', user.id)
+          .eq('role', 'owner')
           .single();
 
-        if (barberError || !barberData) {
-          throw new Error('Barbeiro não encontrado');
+        if (barberError || !ownerBarber) {
+          throw new Error('Você precisa ser um barbeiro owner para criar serviços');
         }
 
         // Criar novo serviço
         const { error } = await supabase
           .from('services')
           .insert({
-            barber_id: barberData.id,
+            barber_id: ownerBarber.id,
             name: formData.name,
             duration: parseInt(formData.duration),
             price: parseFloat(formData.price)
