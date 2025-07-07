@@ -147,7 +147,7 @@ export const BarbersList: React.FC = () => {
         const { data: barberData, error: barberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: ownerBarber.profile_id, // Usar o profile_id do barbeiro owner como referência
+            profile_id: null, // Funcionários não têm profile próprio
             specialty: formData.specialty,
             experience_years: formData.experience_years,
             is_active: formData.is_active,
