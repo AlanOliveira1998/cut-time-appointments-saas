@@ -125,83 +125,56 @@ export const BarbersList: React.FC = () => {
           description: "Barbeiro atualizado com sucesso",
         });
       } else {
-        console.log('➕ Modo criação - Cadastrando novo barbeiro');
+        console.log('➕ Modo criação - Cadastrando novo barbeiro funcionário');
         
-        // Gerar ID único para o profile
-        const profileId = crypto.randomUUID();
-        console.log('🆔 ID gerado para o profile:', profileId);
-
-        // Criar novo perfil primeiro
-        console.log('👤 Criando novo profile...');
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .insert([{
-            id: profileId,
-            name: formData.name,
-            phone: formData.phone
-          }])
-          .select()
-          .single();
-
-        if (profileError) {
-          console.error('❌ Erro ao criar profile:', profileError);
-          console.error('📋 Detalhes do erro:', {
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint
-          });
-          throw profileError;
-        }
-
-        console.log('✅ Profile criado com sucesso:', profileData);
-
         // Buscar o barbeiro owner atual
-        const { data: ownerBarber } = await supabase
+        const { data: ownerBarber, error: ownerError } = await supabase
           .from('barbers')
           .select('id')
           .eq('profile_id', user?.id)
           .eq('role', 'owner')
           .single();
 
-        // Criar novo barbeiro
-        console.log('💼 Criando novo barbeiro...');
+        if (ownerError || !ownerBarber) {
+          console.error('❌ Usuário não é um barbeiro owner:', ownerError);
+          throw new Error('Você precisa ser um barbeiro owner para cadastrar funcionários');
+        }
+
+        console.log('✅ Barbeiro owner encontrado:', ownerBarber.id);
+
+        // Criar novo barbeiro funcionário (sem profile separado)
+        console.log('💼 Criando novo barbeiro funcionário...');
         const { data: barberData, error: barberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: profileData.id,
+            profile_id: ownerBarber.id, // Usar o ID do barbeiro owner como referência
             specialty: formData.specialty,
             experience_years: formData.experience_years,
             is_active: formData.is_active,
             role: 'employee',
-            owner_id: ownerBarber?.id
+            owner_id: ownerBarber.id,
+            // Armazenar dados do funcionário diretamente na tabela barbers
+            employee_name: formData.name,
+            employee_phone: formData.phone
           }])
           .select()
           .single();
 
         if (barberError) {
-          console.error('❌ Erro ao criar barbeiro:', barberError);
+          console.error('❌ Erro ao criar barbeiro funcionário:', barberError);
           console.error('📋 Detalhes do erro:', {
             code: barberError.code,
             message: barberError.message,
             details: barberError.details,
             hint: barberError.hint
           });
-          
-          // Se falhou ao criar barbeiro, tentar limpar o profile criado
-          console.log('🧹 Tentando limpar profile órfão...');
-          await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', profileData.id);
-            
           throw barberError;
         }
 
-        console.log('✅ Barbeiro criado com sucesso:', barberData);
+        console.log('✅ Barbeiro funcionário criado com sucesso:', barberData);
         toast({
           title: "Sucesso!",
-          description: "Barbeiro cadastrado com sucesso",
+          description: "Barbeiro funcionário cadastrado com sucesso",
         });
       }
 
