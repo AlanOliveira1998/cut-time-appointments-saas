@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '../../../integrations/supabase/client';
@@ -39,7 +40,7 @@ export interface Profile {
   created_at: string;
 }
 
-export const useBookingData = (barberName: string | undefined) => {
+export const useBookingData = (barberId: string | undefined) => {
   const [barber, setBarber] = useState<Profile | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
@@ -47,35 +48,40 @@ export const useBookingData = (barberName: string | undefined) => {
   const [loading, setLoading] = useState(true);
 
   const loadBarberData = async () => {
-    if (!barberName) return;
+    if (!barberId) return;
     
     try {
       setLoading(true);
-      console.log('Carregando dados do barbeiro:', barberName);
+      console.log('Carregando dados do barbeiro:', barberId);
       
-      // Buscar barbeiro pelo nome (URL amigável)
-      // Convertendo o nome da URL de volta para busca
-      const searchName = barberName.replace(/-/g, ' ');
-      console.log('Nome de busca:', searchName);
-      
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('name', `%${searchName}%`);
+      // Buscar barbeiro pelo ID
+      const { data: barberData, error: barberError } = await supabase
+        .from('barbers')
+        .select(`
+          *,
+          profiles (
+            id,
+            name,
+            phone,
+            created_at
+          )
+        `)
+        .eq('id', barberId)
+        .single();
 
-      console.log('Resultado da busca de profiles:', profiles, profileError);
+      console.log('Resultado da busca de barbeiro:', barberData, barberError);
 
-      if (profileError) {
-        console.error('Error loading barber:', profileError);
+      if (barberError) {
+        console.error('Error loading barber:', barberError);
         toast({
           title: "Erro ao carregar barbeiro",
-          description: profileError.message,
+          description: barberError.message,
           variant: "destructive",
         });
         return;
       }
 
-      if (!profiles || profiles.length === 0) {
+      if (!barberData) {
         console.log('Nenhum barbeiro encontrado');
         toast({
           title: "Barbeiro não encontrado",
@@ -85,15 +91,32 @@ export const useBookingData = (barberName: string | undefined) => {
         return;
       }
 
-      const foundBarber = profiles[0];
-      console.log('Barbeiro encontrado:', foundBarber);
-      setBarber(foundBarber);
+      // Para funcionários, usar os dados do employee_name, para owners usar o profile
+      let barberProfile: Profile;
+      if (barberData.role === 'employee') {
+        barberProfile = {
+          id: barberData.id,
+          name: barberData.employee_name || 'Nome não informado',
+          phone: barberData.employee_phone || '',
+          created_at: barberData.created_at
+        };
+      } else {
+        barberProfile = barberData.profiles || {
+          id: barberData.id,
+          name: 'Nome não informado',
+          phone: '',
+          created_at: barberData.created_at
+        };
+      }
+
+      console.log('Barbeiro encontrado:', barberProfile);
+      setBarber(barberProfile);
       
       // Carregar serviços do barbeiro
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*')
-        .eq('barber_id', foundBarber.id);
+        .eq('barber_id', barberId);
 
       console.log('Serviços carregados:', servicesData, servicesError);
 
@@ -107,7 +130,7 @@ export const useBookingData = (barberName: string | undefined) => {
       const { data: workingHoursData, error: workingHoursError } = await supabase
         .from('working_hours')
         .select('*')
-        .eq('barber_id', foundBarber.id);
+        .eq('barber_id', barberId);
 
       console.log('Horários carregados:', workingHoursData, workingHoursError);
 
@@ -156,7 +179,7 @@ export const useBookingData = (barberName: string | undefined) => {
 
   useEffect(() => {
     loadBarberData();
-  }, [barberName]);
+  }, [barberId]);
 
   return {
     barber,

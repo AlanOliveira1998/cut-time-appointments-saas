@@ -1,17 +1,21 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '../../../integrations/supabase/client';
 
 interface Barber {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   specialty?: string;
   experience_years: number;
   is_active: boolean;
-  profiles: {
+  role: 'owner' | 'employee';
+  employee_name?: string;
+  employee_phone?: string;
+  profiles?: {
     name: string;
     phone?: string;
-  };
+  } | null;
 }
 
 export const useBarbers = () => {
@@ -21,7 +25,7 @@ export const useBarbers = () => {
   const loadBarbers = async () => {
     try {
       setLoading(true);
-      console.log('Carregando barbeiros...');
+      console.log('Carregando barbeiros ativos...');
       
       const { data, error } = await supabase
         .from('barbers')

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,14 +7,17 @@ import { User } from 'lucide-react';
 
 interface Barber {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   specialty?: string;
   experience_years: number;
   is_active: boolean;
-  profiles: {
+  role: 'owner' | 'employee';
+  employee_name?: string;
+  employee_phone?: string;
+  profiles?: {
     name: string;
     phone?: string;
-  };
+  } | null;
 }
 
 interface BarberSelectionProps {
@@ -52,7 +56,9 @@ export const BarberSelection: React.FC<BarberSelectionProps> = ({
                       <User className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-lg">{barber.profiles.name}</h3>
+                      <h3 className="font-medium text-lg">
+                        {barber.profiles?.name || barber.employee_name || 'Nome não informado'}
+                      </h3>
                       <div className="flex items-center space-x-2 mt-1">
                         {barber.specialty && (
                           <Badge variant="secondary">
@@ -61,6 +67,9 @@ export const BarberSelection: React.FC<BarberSelectionProps> = ({
                         )}
                         <Badge variant="outline">
                           {barber.experience_years} anos de experiência
+                        </Badge>
+                        <Badge variant={barber.role === 'owner' ? "default" : "outline"}>
+                          {barber.role === 'owner' ? 'Dono' : 'Funcionário'}
                         </Badge>
                       </div>
                     </div>

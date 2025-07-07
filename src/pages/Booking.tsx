@@ -1,5 +1,5 @@
+
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { Scissors } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
@@ -15,14 +15,17 @@ import { ProgressSteps } from '../components/booking/components/ProgressSteps';
 
 interface Barber {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   specialty?: string;
   experience_years: number;
   is_active: boolean;
-  profiles: {
+  role: 'owner' | 'employee';
+  employee_name?: string;
+  employee_phone?: string;
+  profiles?: {
     name: string;
     phone?: string;
-  };
+  } | null;
 }
 
 export const Booking: React.FC = () => {
@@ -41,7 +44,7 @@ export const Booking: React.FC = () => {
 
   // Carregar dados do barbeiro selecionado
   const { services, workingHours, appointments, loading: loadingBarberData, loadAppointments } = useBookingData(
-    selectedBarber ? selectedBarber.profiles.name.toLowerCase().replace(/\s+/g, '-') : undefined
+    selectedBarber?.id
   );
 
   React.useEffect(() => {
@@ -145,7 +148,12 @@ export const Booking: React.FC = () => {
   if (isBookingComplete && selectedService && selectedBarber) {
     return (
       <BookingConfirmation
-        barber={{ id: selectedBarber.id, name: selectedBarber.profiles.name, phone: selectedBarber.profiles.phone || '', created_at: '' }}
+        barber={{ 
+          id: selectedBarber.id, 
+          name: selectedBarber.profiles?.name || selectedBarber.employee_name || 'Nome não informado',
+          phone: selectedBarber.profiles?.phone || selectedBarber.employee_phone || '', 
+          created_at: '' 
+        }}
         selectedService={selectedService}
         selectedDate={selectedDate}
         selectedTime={selectedTime}
@@ -164,7 +172,7 @@ export const Booking: React.FC = () => {
           <h1 className="text-3xl font-bold mb-2">Agendar Serviço</h1>
           <p className="text-gray-600">
             {selectedBarber 
-              ? `Agendando com ${selectedBarber.profiles.name}` 
+              ? `Agendando com ${selectedBarber.profiles?.name || selectedBarber.employee_name}` 
               : 'Escolha o barbeiro e serviço de sua preferência'
             }
           </p>
