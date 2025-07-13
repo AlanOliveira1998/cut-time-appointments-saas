@@ -211,131 +211,148 @@ export const BookingPage: React.FC = () => {
       setCurrentStep(5);
       
       toast({
-        title: "Agendamento confirmado!",
-        description: "Seu horário foi agendado com sucesso.",
+        title: "Agendamento realizado com sucesso!",
+        description: "Seu horário foi confirmado. Aguardamos você!",
       });
+
+      // Atualizar a lista de agendamentos
+      if (selectedBarber && selectedDate) {
+        loadAppointments(selectedBarber.id, selectedDate);
+      }
+
     } catch (error: any) {
       console.error('Error creating appointment:', error);
       toast({
         title: "Erro ao criar agendamento",
-        description: error.message,
+        description: error.message || "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
     }
   };
 
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedBarber(null);
+    setSelectedService(null);
+    setSelectedDate('');
+    setSelectedTime('');
+    setClientName('');
+    setClientPhone('');
+    setCurrentStep(1);
+    setIsBookingComplete(false);
+  };
+
   if (loadingBarbers) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center animate-pulse">
-            <Scissors className="w-8 h-8 text-gray-400" />
-          </div>
-          <p className="text-lg">Carregando barbeiros...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center p-4">
+        <Card className="barber-card w-full max-w-md animate-fade-in-up">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary rounded-xl flex items-center justify-center animate-pulse">
+              <Scissors className="w-8 h-8 text-white" />
+            </div>
+            <p className="text-gray-600">Carregando barbeiros...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  if (isBookingComplete && selectedService && selectedBarber) {
-    return (
-      <BookingConfirmation
-        barber={{ 
-          id: selectedBarber.id, 
-          name: selectedBarber.profiles?.name || selectedBarber.employee_name || 'Nome não informado',
-          phone: selectedBarber.profiles?.phone || selectedBarber.employee_phone || '', 
-          created_at: '' 
-        }}
-        selectedBarber={selectedBarber}
-        selectedService={selectedService}
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#00657C] to-[#004A5A] rounded-full flex items-center justify-center">
-            <Scissors className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">Agendar Serviço</h1>
-          <p className="text-gray-600">
-            {selectedBarber 
-              ? `Agendando com ${selectedBarber.profiles?.name || selectedBarber.employee_name}` 
-              : 'Escolha o barbeiro e serviço de sua preferência'
-            }
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+      {/* Header */}
+      <header className="barber-header py-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          {/* Logo e Nome removidos */}
+          <div></div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="flex items-center space-x-1"
+          >
+            <User className="w-4 h-4" />
+            <span className="hidden sm:inline">Voltar</span>
+          </Button>
         </div>
+      </header>
 
-        <ProgressSteps currentStep={currentStep} />
-
-        {/* Step 1: Selecionar Barbeiro */}
-        {currentStep === 1 && (
-          <BarberSelection
-            barbers={filteredBarbers}
-            onBarberSelect={handleBarberSelect}
-          />
-        )}
-
-        {/* Step 2: Selecionar Serviço */}
-        {currentStep === 2 && selectedBarber && (
-          <ServiceSelection
-            services={services}
-            selectedBarber={selectedBarber}
-            onServiceSelect={handleServiceSelect}
-          />
-        )}
-
-        {/* Step 3: Selecionar Data e Hora */}
-        {currentStep === 3 && selectedService && selectedBarber && (
-          <DateTimeSelection
-            selectedService={selectedService}
-            selectedBarber={selectedBarber}
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            availableSlots={availableSlots}
-            onDateChange={(date) => {
-              setSelectedDate(date);
-              setSelectedTime(''); // Limpar horário selecionado
-            }}
-            onTimeChange={setSelectedTime}
-            onBack={() => setCurrentStep(2)}
-            onContinue={handleDateTimeSelect}
-          />
-        )}
-        
-        {/* Fallback para etapa 3 sem barbeiro */}
-        {currentStep === 3 && selectedService && !selectedBarber && (
-          <div className="text-center py-8">
-            <p>Carregando barbeiro...</p>
-            <Button 
-              onClick={() => setCurrentStep(1)}
-              className="mt-4"
-            >
-              Voltar para seleção de barbeiro
-            </Button>
+      {/* Conteúdo Principal */}
+      <div className="barber-container py-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Progress Steps */}
+          <div className="mb-8">
+            <ProgressSteps currentStep={currentStep} />
           </div>
-        )}
 
-        {/* Step 4: Dados do Cliente */}
-        {currentStep === 4 && selectedService && selectedBarber && (
-          <ClientDataForm
-            selectedBarber={selectedBarber}
-            selectedService={selectedService}
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            clientName={clientName}
-            clientPhone={clientPhone}
-            onClientNameChange={setClientName}
-            onClientPhoneChange={setClientPhone}
-            onBack={() => setCurrentStep(3)}
-            onSubmit={handleBooking}
-          />
-        )}
+          {/* Card Principal */}
+          <Card className="barber-card animate-fade-in-up">
+            <CardContent className="p-6 sm:p-8">
+              {currentStep === 1 && (
+                <BarberSelection
+                  barbers={filteredBarbers}
+                  onBarberSelect={handleBarberSelect}
+                />
+              )}
+
+              {currentStep === 2 && (
+                <ServiceSelection
+                  services={services}
+                  selectedBarber={selectedBarber}
+                  onServiceSelect={handleServiceSelect}
+                />
+              )}
+
+              {currentStep === 3 && (
+                <DateTimeSelection
+                  selectedService={selectedService}
+                  selectedBarber={selectedBarber}
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                  availableSlots={availableSlots}
+                  onDateChange={setSelectedDate}
+                  onTimeChange={setSelectedTime}
+                  onBack={handleBack}
+                  onContinue={handleDateTimeSelect}
+                />
+              )}
+
+              {currentStep === 4 && (
+                <ClientDataForm
+                  clientName={clientName}
+                  clientPhone={clientPhone}
+                  onClientNameChange={setClientName}
+                  onClientPhoneChange={setClientPhone}
+                  onBack={handleBack}
+                  onSubmit={handleBooking}
+                  selectedBarber={selectedBarber}
+                  selectedService={selectedService}
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                />
+              )}
+
+              {currentStep === 5 && (
+                <BookingConfirmation
+                  barber={{
+                    id: selectedBarber?.id || '',
+                    name: selectedBarber?.profiles?.name || selectedBarber?.employee_name || '',
+                    phone: selectedBarber?.profiles?.phone || selectedBarber?.employee_phone || '',
+                    created_at: ''
+                  }}
+                  selectedBarber={selectedBarber}
+                  selectedService={selectedService}
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
