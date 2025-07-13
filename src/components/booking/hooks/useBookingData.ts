@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '../../../integrations/supabase/client';
 
@@ -48,32 +48,16 @@ export const useBookingData = (barberId: string | undefined) => {
   const [loading, setLoading] = useState(true);
 
   // Helper function to check if a string looks like a UUID
-  const isUUID = (str: string): boolean => {
+  const isUUID = useCallback((str: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
-  };
+  }, []);
 
-  const loadBarberData = async () => {
+  const loadBarberData = useCallback(async () => {
     if (!barberId) return;
     
     try {
       setLoading(true);
-      console.log('Carregando dados do barbeiro:', barberId);
-      
-      // Debug: Check what barbers exist in the database
-      const { data: allBarbers, error: debugError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          employee_name,
-          role,
-          is_active,
-          profiles (
-            name
-          )
-        `);
-      
-      console.log('Debug - All barbers in database:', allBarbers, debugError);
       
       let barberData, barberError;
       
@@ -98,7 +82,6 @@ export const useBookingData = (barberId: string | undefined) => {
         barberError = result.error;
       } else {
         // Search by name (either in profiles.name or employee_name)
-        console.log('Searching for barber by name:', barberId);
         
         // First try to find by employee_name
         let result = await supabase
@@ -115,11 +98,8 @@ export const useBookingData = (barberId: string | undefined) => {
           .ilike('employee_name', `%${barberId}%`)
           .eq('is_active', true);
         
-        console.log('Search by employee_name result:', result);
-        
         // If not found by employee_name, try by profiles.name
         if (!result.data || result.data.length === 0) {
-          console.log('No results by employee_name, trying profiles.name');
           result = await supabase
             .from('barbers')
             .select(`
@@ -133,16 +113,12 @@ export const useBookingData = (barberId: string | undefined) => {
             `)
             .ilike('profiles.name', `%${barberId}%`)
             .eq('is_active', true);
-          
-          console.log('Search by profiles.name result:', result);
         }
         
         // Take the first result if found
         barberData = result.data && result.data.length > 0 ? result.data[0] : null;
         barberError = result.error;
       }
-
-      console.log('Resultado da busca de barbeiro:', barberData, barberError);
 
       if (barberError) {
         console.error('Error loading barber:', barberError);
@@ -155,7 +131,6 @@ export const useBookingData = (barberId: string | undefined) => {
       }
 
       if (!barberData) {
-        console.log('Nenhum barbeiro encontrado');
         toast({
           title: "Barbeiro não encontrado",
           description: "O barbeiro solicitado não foi encontrado.",
@@ -182,23 +157,13 @@ export const useBookingData = (barberId: string | undefined) => {
         };
       }
 
-      console.log('Barbeiro encontrado:', barberProfile);
       setBarber(barberProfile);
-      
-      // Debug: Verificar o barber_id que será usado
-      console.log('=== DEBUG BARBER ID ===');
-      console.log('BarberData ID:', barberData.id);
-      console.log('BarberProfile ID:', barberProfile.id);
-      console.log('BarberData completo:', barberData);
-      console.log('======================');
       
       // Carregar serviços do barbeiro
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*')
         .eq('barber_id', barberData.id);
-
-      console.log('Serviços carregados:', servicesData, servicesError);
 
       if (servicesError) {
         console.error('Error loading services:', servicesError);
@@ -211,8 +176,6 @@ export const useBookingData = (barberId: string | undefined) => {
         .from('working_hours')
         .select('*')
         .eq('barber_id', barberData.id);
-
-      console.log('Horários carregados:', workingHoursData, workingHoursError);
 
       if (workingHoursError) {
         console.error('Error loading working hours:', workingHoursError);
@@ -230,22 +193,18 @@ export const useBookingData = (barberId: string | undefined) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [barberId, isUUID]);
 
-  const loadAppointments = async (barberId: string, selectedDate: string) => {
+  const loadAppointments = useCallback(async (barberId: string, selectedDate: string) => {
     if (!selectedDate) return;
 
     try {
-      console.log('Carregando agendamentos para:', barberId, selectedDate);
-      
       const { data: appointmentsData, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('barber_id', barberId)
         .eq('appointment_date', selectedDate)
         .neq('status', 'cancelled');
-
-      console.log('Agendamentos carregados:', appointmentsData, error);
 
       if (error) {
         console.error('Error loading appointments:', error);
@@ -255,13 +214,10 @@ export const useBookingData = (barberId: string | undefined) => {
     } catch (error) {
       console.error('Error loading appointments:', error);
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    loadBarberData();
-  }, [barberId]);
-
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  const memoizedValue = useMemo(() => ({
     barber,
     services,
     workingHours,
@@ -269,5 +225,11 @@ export const useBookingData = (barberId: string | undefined) => {
     loading,
     loadAppointments,
     setAppointments
-  };
+  }), [barber, services, workingHours, appointments, loading, loadAppointments]);
+
+  useEffect(() => {
+    loadBarberData();
+  }, [loadBarberData]);
+
+  return memoizedValue;
 };
