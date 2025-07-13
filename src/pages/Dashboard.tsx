@@ -15,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import { simulateSubscriptionActivation } from '../lib/kiwify-webhook';
 
 const Dashboard: React.FC = () => {
   const { user, logout, isTrialExpired, loading } = useAuth();
@@ -39,22 +40,31 @@ const Dashboard: React.FC = () => {
       calculateTrialDays();
       loadBarbershopLogo();
       
-      // Verificar se o trial expirou
-      if (isTrialExpired()) {
-        console.log('Trial expirado - exibindo modal');
-        setShowTrialModal(true);
-      }
+      // Verificar se o trial expirou (agora assíncrono)
+      const checkTrialStatus = async () => {
+        const expired = await isTrialExpired();
+        if (expired) {
+          console.log('Trial expirado - exibindo modal');
+          setShowTrialModal(true);
+        }
+      };
+      
+      checkTrialStatus();
     }
   }, [user, isTrialExpired]);
 
   // Verificação adicional para garantir que o modal seja exibido
   useEffect(() => {
     if (user && !loading) {
-      const trialExpired = isTrialExpired();
-      if (trialExpired && !showTrialModal) {
-        console.log('Trial expirado detectado - exibindo modal');
-        setShowTrialModal(true);
-      }
+      const checkTrialStatus = async () => {
+        const trialExpired = await isTrialExpired();
+        if (trialExpired && !showTrialModal) {
+          console.log('Trial expirado detectado - exibindo modal');
+          setShowTrialModal(true);
+        }
+      };
+      
+      checkTrialStatus();
     }
   }, [user, loading, isTrialExpired, showTrialModal]);
 
@@ -186,9 +196,10 @@ const Dashboard: React.FC = () => {
     setDaysRemaining(remaining);
   };
 
-  const handleTrialModalClose = () => {
+  const handleTrialModalClose = async () => {
     // Não permitir fechar o modal se o trial expirou
-    if (isTrialExpired()) {
+    const expired = await isTrialExpired();
+    if (expired) {
       // Redirecionar para a página de compra
       window.open('https://kiwify.app/PYxzlNE', '_blank');
     }
@@ -225,6 +236,19 @@ const Dashboard: React.FC = () => {
 
   const openBookingPage = () => {
     window.open(getPublicBookingUrl(), '_blank');
+  };
+
+  // Função para testar ativação de assinatura (apenas para desenvolvimento)
+  const handleTestSubscription = async () => {
+    if (!user) return;
+    
+    try {
+      await simulateSubscriptionActivation(user.id);
+      // Recarregar página para atualizar status
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro ao testar assinatura:', error);
+    }
   };
 
   return (
@@ -405,6 +429,18 @@ const Dashboard: React.FC = () => {
                           <Crown className="w-3 h-3" />
                           <span>Trial expirado - Ative seu plano</span>
                         </Badge>
+                      )}
+                      
+                      {/* Botão de teste para desenvolvimento */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleTestSubscription}
+                          className="ml-2 text-xs"
+                        >
+                          🧪 Testar Ativação
+                        </Button>
                       )}
                     </div>
                   </div>
