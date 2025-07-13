@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Clock, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, DollarSign, RefreshCw } from 'lucide-react';
 
 interface Service {
   id: string;
@@ -18,6 +18,13 @@ interface Service {
   duration: number;
   price: number;
   created_at: string;
+  barber?: {
+    id: string;
+    employee_name?: string;
+    profiles?: {
+      name: string;
+    } | null;
+  };
 }
 
 export const ServicesList: React.FC = () => {
@@ -90,7 +97,16 @@ export const ServicesList: React.FC = () => {
 
       const { data, error } = await supabase
         .from('services')
-        .select('*')
+        .select(`
+          *,
+          barber:barbers (
+            id,
+            employee_name,
+            profiles (
+              name
+            )
+          )
+        `)
         .in('barber_id', barberIds)
         .order('created_at', { ascending: false });
 
@@ -119,7 +135,7 @@ export const ServicesList: React.FC = () => {
 
     try {
       if (editingService) {
-        // Editar serviço existente
+        // Editar serviço existente - atualizar apenas o serviço específico
         const { error } = await supabase
           .from('services')
           .update({
@@ -148,21 +164,36 @@ export const ServicesList: React.FC = () => {
           throw new Error('Você precisa ser um barbeiro owner para criar serviços');
         }
 
-        // Criar novo serviço
+        // Buscar todos os barbeiros da barbearia (owner + funcionários)
+        const { data: allBarbers, error: allBarbersError } = await supabase
+          .from('barbers')
+          .select('id')
+          .or(`id.eq.${ownerBarber.id},owner_id.eq.${ownerBarber.id}`);
+
+        if (allBarbersError) {
+          console.error('Error loading barbers:', allBarbersError);
+          throw new Error('Erro ao carregar barbeiros da barbearia');
+        }
+
+        const barberIds = allBarbers?.map(b => b.id) || [ownerBarber.id];
+
+        // Criar o serviço para todos os barbeiros da barbearia
+        const servicesToCreate = barberIds.map(barberId => ({
+          barber_id: barberId,
+          name: formData.name,
+          duration: parseInt(formData.duration),
+          price: parseFloat(formData.price)
+        }));
+
         const { error } = await supabase
           .from('services')
-          .insert({
-            barber_id: ownerBarber.id,
-            name: formData.name,
-            duration: parseInt(formData.duration),
-            price: parseFloat(formData.price)
-          });
+          .insert(servicesToCreate);
 
         if (error) throw error;
 
         toast({
           title: "Serviço criado!",
-          description: "O novo serviço foi adicionado com sucesso.",
+          description: `O novo serviço foi adicionado para ${barberIds.length} barbeiro${barberIds.length > 1 ? 's' : ''} da barbearia.`,
         });
       }
       
@@ -190,17 +221,53 @@ export const ServicesList: React.FC = () => {
 
   const handleDelete = async (serviceId: string) => {
     try {
+      // Primeiro, buscar o serviço para obter o nome
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('name')
+        .eq('id', serviceId)
+        .single();
+
+      if (serviceError) throw serviceError;
+
+      // Buscar o barbeiro owner do usuário
+      const { data: ownerBarber, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user?.id)
+        .eq('role', 'owner')
+        .single();
+
+      if (barberError || !ownerBarber) {
+        throw new Error('Você precisa ser um barbeiro owner para excluir serviços');
+      }
+
+      // Buscar todos os barbeiros da barbearia
+      const { data: allBarbers, error: allBarbersError } = await supabase
+        .from('barbers')
+        .select('id')
+        .or(`id.eq.${ownerBarber.id},owner_id.eq.${ownerBarber.id}`);
+
+      if (allBarbersError) {
+        console.error('Error loading barbers:', allBarbersError);
+        throw new Error('Erro ao carregar barbeiros da barbearia');
+      }
+
+      const barberIds = allBarbers?.map(b => b.id) || [ownerBarber.id];
+
+      // Remover o serviço de todos os barbeiros da barbearia
       const { error } = await supabase
         .from('services')
         .delete()
-        .eq('id', serviceId);
+        .eq('name', serviceData.name)
+        .in('barber_id', barberIds);
 
       if (error) throw error;
 
       loadServices();
       toast({
         title: "Serviço removido!",
-        description: "O serviço foi removido com sucesso.",
+        description: `O serviço "${serviceData.name}" foi removido de todos os barbeiros da barbearia.`,
       });
     } catch (error: any) {
       console.error('Error deleting service:', error);
@@ -225,6 +292,132 @@ export const ServicesList: React.FC = () => {
     }).format(price);
   };
 
+  // Agrupar serviços por nome para mostrar informações consolidadas
+  const groupedServices = services.reduce((acc, service) => {
+    if (!acc[service.name]) {
+      acc[service.name] = {
+        name: service.name,
+        duration: service.duration,
+        price: service.price,
+        barbers: [],
+        count: 0
+      };
+    }
+    
+    const barberName = service.barber?.profiles?.name || service.barber?.employee_name || 'Nome não informado';
+    if (!acc[service.name].barbers.includes(barberName)) {
+      acc[service.name].barbers.push(barberName);
+    }
+    acc[service.name].count++;
+    
+    return acc;
+  }, {} as Record<string, { name: string; duration: number; price: number; barbers: string[]; count: number }>);
+
+  const getBarberName = (service: Service) => {
+    return service.barber?.profiles?.name || service.barber?.employee_name || 'Nome não informado';
+  };
+
+  const syncServicesForAllBarbers = async () => {
+    if (!user) return;
+
+    try {
+      // Buscar o barbeiro owner do usuário
+      const { data: ownerBarber, error: barberError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .eq('role', 'owner')
+        .single();
+
+      if (barberError || !ownerBarber) {
+        throw new Error('Você precisa ser um barbeiro owner para sincronizar serviços');
+      }
+
+      // Buscar todos os barbeiros da barbearia
+      const { data: allBarbers, error: allBarbersError } = await supabase
+        .from('barbers')
+        .select('id')
+        .or(`id.eq.${ownerBarber.id},owner_id.eq.${ownerBarber.id}`);
+
+      if (allBarbersError) {
+        throw new Error('Erro ao carregar barbeiros da barbearia');
+      }
+
+      const barberIds = allBarbers?.map(b => b.id) || [ownerBarber.id];
+
+      // Buscar todos os serviços únicos da barbearia
+      const { data: existingServices, error: servicesError } = await supabase
+        .from('services')
+        .select('name, duration, price')
+        .in('barber_id', barberIds);
+
+      if (servicesError) throw servicesError;
+
+      // Agrupar serviços únicos
+      const uniqueServices = existingServices?.reduce((acc, service) => {
+        if (!acc.find(s => s.name === service.name)) {
+          acc.push(service);
+        }
+        return acc;
+      }, [] as typeof existingServices) || [];
+
+      let syncedCount = 0;
+
+      // Para cada serviço único, verificar se todos os barbeiros o têm
+      for (const service of uniqueServices) {
+        const { data: existingServiceForBarbers, error: checkError } = await supabase
+          .from('services')
+          .select('barber_id')
+          .eq('name', service.name)
+          .in('barber_id', barberIds);
+
+        if (checkError) continue;
+
+        const barbersWithService = existingServiceForBarbers?.map(s => s.barber_id) || [];
+        const missingBarbers = barberIds.filter(id => !barbersWithService.includes(id));
+
+        if (missingBarbers.length > 0) {
+          // Criar serviço para barbeiros que não o têm
+          const servicesToCreate = missingBarbers.map(barberId => ({
+            barber_id: barberId,
+            name: service.name,
+            duration: service.duration,
+            price: service.price
+          }));
+
+          const { error: createError } = await supabase
+            .from('services')
+            .insert(servicesToCreate);
+
+          if (!createError) {
+            syncedCount += missingBarbers.length;
+          }
+        }
+      }
+
+      if (syncedCount > 0) {
+        toast({
+          title: "Serviços sincronizados!",
+          description: `${syncedCount} serviço(s) foram adicionado(s) para barbeiros que não os tinham.`,
+        });
+      } else {
+        toast({
+          title: "Sincronização concluída",
+          description: "Todos os serviços já estão disponíveis para todos os barbeiros.",
+        });
+      }
+
+      loadServices();
+    } catch (error: any) {
+      console.error('Error syncing services:', error);
+      toast({
+        title: "Erro ao sincronizar serviços",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Card className="barber-card">
@@ -240,19 +433,28 @@ export const ServicesList: React.FC = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-xl">Meus Serviços</CardTitle>
+            <CardTitle className="text-xl">Serviços da Barbearia</CardTitle>
             <CardDescription>
-              Gerencie os serviços oferecidos em sua barbearia
+              Gerencie os serviços oferecidos por todos os barbeiros da barbearia
             </CardDescription>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="barber-button-primary" onClick={resetForm}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Serviço
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={syncServicesForAllBarbers}
+              title="Sincronizar serviços para todos os barbeiros"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Sincronizar
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="barber-button-primary" onClick={resetForm}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Serviço
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
                   {editingService ? 'Editar Serviço' : 'Novo Serviço'}
@@ -314,7 +516,8 @@ export const ServicesList: React.FC = () => {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -330,22 +533,35 @@ export const ServicesList: React.FC = () => {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {services.map((service) => (
-              <div key={service.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+            {Object.values(groupedServices).map((groupedService) => (
+              <div key={groupedService.name} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-medium text-lg">{service.name}</h3>
+                  <div>
+                    <h3 className="font-medium text-lg">{groupedService.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Oferecido por {groupedService.barbers.length} barbeiro{groupedService.barbers.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
                   <div className="flex space-x-1">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleEdit(service)}
+                      onClick={() => {
+                        // Encontrar o primeiro serviço para editar
+                        const firstService = services.find(s => s.name === groupedService.name);
+                        if (firstService) handleEdit(firstService);
+                      }}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDelete(service.id)}
+                      onClick={() => {
+                        // Encontrar o primeiro serviço para excluir
+                        const firstService = services.find(s => s.name === groupedService.name);
+                        if (firstService) handleDelete(firstService.id);
+                      }}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -353,15 +569,26 @@ export const ServicesList: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-4 mb-3">
                   <Badge variant="secondary" className="flex items-center space-x-1">
                     <Clock className="w-3 h-3" />
-                    <span>{service.duration}min</span>
+                    <span>{groupedService.duration}min</span>
                   </Badge>
                   <Badge variant="outline" className="flex items-center space-x-1">
                     <DollarSign className="w-3 h-3" />
-                    <span>{formatPrice(service.price)}</span>
+                    <span>{formatPrice(groupedService.price)}</span>
                   </Badge>
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium mb-1">Barbeiros que oferecem:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {groupedService.barbers.map((barberName, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {barberName}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
