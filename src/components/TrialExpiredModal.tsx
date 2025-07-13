@@ -10,7 +10,7 @@ interface TrialExpiredModalProps {
 
 export const TrialExpiredModal: React.FC<TrialExpiredModalProps> = ({ isOpen, onClose }) => {
   const handleActivatePlan = () => {
-    window.open('https://pay.kiwify.com.br/jhpskLr', '_blank');
+    window.open('https://kiwify.app/PYxzlNE', '_blank');
   };
 
   return (
