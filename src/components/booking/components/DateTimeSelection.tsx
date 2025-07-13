@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,8 +60,22 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({
   onBack,
   onContinue
 }) => {
-  console.log('DateTimeSelection - selectedBarber:', selectedBarber);
-  console.log('DateTimeSelection - selectedService:', selectedService);
+  console.log('=== DEBUG DATETIME SELECTION ===');
+  console.log('selectedBarber:', selectedBarber);
+  console.log('selectedService:', selectedService);
+  console.log('selectedDate:', selectedDate);
+  console.log('selectedTime:', selectedTime);
+  console.log('availableSlots:', availableSlots);
+  console.log('================================');
+
+  // Validação robusta do selectedBarber
+  useEffect(() => {
+    if (!selectedBarber) {
+      console.error('DateTimeSelection: selectedBarber é undefined!');
+      console.error('Redirecionando para etapa anterior...');
+      onBack();
+    }
+  }, [selectedBarber, onBack]);
   
   const { today, maxDateString } = getDateLimits();
 
@@ -94,6 +108,7 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({
 
   // Se não há barbeiro selecionado, mostrar mensagem de erro
   if (!selectedBarber) {
+    console.error('DateTimeSelection: Renderizando sem barbeiro selecionado');
     return (
       <Card className="barber-card">
         <CardContent className="p-6">
@@ -101,6 +116,13 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({
             <User className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             <p className="text-gray-500">Erro: Barbeiro não selecionado</p>
             <p className="text-sm text-gray-400 mt-2">Por favor, volte e selecione um barbeiro</p>
+            <Button 
+              onClick={onBack}
+              className="mt-4"
+              variant="outline"
+            >
+              Voltar para seleção de barbeiro
+            </Button>
           </div>
         </CardContent>
       </Card>
