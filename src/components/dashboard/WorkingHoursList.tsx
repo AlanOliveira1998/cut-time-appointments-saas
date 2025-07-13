@@ -134,9 +134,11 @@ export const WorkingHoursList: React.FC = () => {
 
       // Inserir novos horários
       if (newHours.length > 0) {
+        // Remover o campo 'id' dos objetos antes de inserir
+        const hoursToInsert = newHours.map(({ id, ...rest }) => rest);
         const { error } = await supabase
           .from('working_hours')
-          .insert(newHours);
+          .insert(hoursToInsert);
 
         if (error) throw error;
       }
@@ -174,15 +176,13 @@ export const WorkingHoursList: React.FC = () => {
       ));
     } else {
       // Criar novo horário
-      const newHour: WorkingHour = {
-        id: `temp-${selectedBarber}-${dayOfWeek}`,
+      const newHour = {
         barber_id: selectedBarber,
         day_of_week: dayOfWeek,
         start_time: field === 'start_time' ? value as string : '09:00',
         end_time: field === 'end_time' ? value as string : '18:00',
         is_active: field === 'is_active' ? value as boolean : true,
       };
-      
       setWorkingHours(prev => [...prev, newHour]);
     }
   };
