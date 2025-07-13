@@ -51,8 +51,13 @@ export const BookingPage: React.FC = () => {
 
   // Debug: Log selectedBarber changes
   useEffect(() => {
-    console.log('selectedBarber changed:', selectedBarber);
-  }, [selectedBarber]);
+    console.log('=== DEBUG BOOKING PAGE ===');
+    console.log('selectedBarber:', selectedBarber);
+    console.log('Current step:', currentStep);
+    console.log('Selected service:', selectedService);
+    console.log('filteredBarbers length:', filteredBarbers.length);
+    console.log('========================');
+  }, [selectedBarber, currentStep, selectedService, filteredBarbers]);
 
   // Carregar dados do barbeiro selecionado
   const { services, workingHours, appointments, loading: loadingBarberData, loadAppointments, setAppointments } = useBookingData(
@@ -69,6 +74,7 @@ export const BookingPage: React.FC = () => {
       });
       
       if (barberFromUrl) {
+        console.log('Barbeiro encontrado na URL:', barberFromUrl);
         setSelectedBarber(barberFromUrl);
         setCurrentStep(2); // Pular para seleção de serviço
       } else {
@@ -86,6 +92,30 @@ export const BookingPage: React.FC = () => {
     }
   }, [barberName, filteredBarbers, selectedBarber]);
 
+  // Sempre que a lista de barbeiros mudar e não houver barbeiro selecionado, selecione o primeiro
+  useEffect(() => {
+    if (filteredBarbers.length > 0 && !selectedBarber) {
+      console.log('Selecionando primeiro barbeiro automaticamente:', filteredBarbers[0]);
+      setSelectedBarber(filteredBarbers[0]);
+    }
+  }, [filteredBarbers, selectedBarber]);
+
+  // Se chegar na etapa 3 sem barbeiro, volte para etapa 1
+  useEffect(() => {
+    if (currentStep === 3 && !selectedBarber) {
+      console.log('Etapa 3 sem barbeiro selecionado, voltando para etapa 1');
+      setCurrentStep(1);
+    }
+  }, [currentStep, selectedBarber]);
+
+  // Garantir que não avance para etapa 3 sem barbeiro
+  useEffect(() => {
+    if (currentStep === 3 && !selectedBarber) {
+      console.log('Bloqueando avanço para etapa 3 sem barbeiro');
+      setCurrentStep(1);
+    }
+  }, [currentStep, selectedBarber]);
+
   useEffect(() => {
     if (selectedService && selectedDate && selectedBarber) {
       const slots = calculateAvailableSlots(selectedService, selectedDate, workingHours, appointments, services);
@@ -94,7 +124,7 @@ export const BookingPage: React.FC = () => {
   }, [selectedService, selectedDate, appointments, workingHours, selectedBarber, services]);
 
   const handleBarberSelect = (barber: Barber) => {
-    console.log('Barbeiro selecionado:', barber);
+    console.log('Barbeiro selecionado manualmente:', barber);
     setSelectedBarber(barber);
     setSelectedService(null); // Resetar serviço selecionado
     setSelectedDate(''); // Resetar data selecionada
@@ -103,8 +133,12 @@ export const BookingPage: React.FC = () => {
   };
 
   const handleServiceSelect = (service: Service) => {
+    if (!selectedBarber) {
+      console.log('Tentativa de selecionar serviço sem barbeiro, voltando para etapa 1');
+      setCurrentStep(1);
+      return;
+    }
     console.log('Serviço selecionado:', service);
-    console.log('Barbeiro atual:', selectedBarber);
     setSelectedService(service);
     setCurrentStep(3);
   };
@@ -273,24 +307,18 @@ export const BookingPage: React.FC = () => {
             onContinue={handleDateTimeSelect}
           />
         )}
-
-        {/* Fallback para quando selectedBarber está undefined */}
+        
+        {/* Fallback para etapa 3 sem barbeiro */}
         {currentStep === 3 && selectedService && !selectedBarber && (
-          <Card className="barber-card">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <User className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500">Erro: Barbeiro não encontrado</p>
-                <p className="text-sm text-gray-400 mt-2">Por favor, volte e selecione um barbeiro novamente</p>
-                <Button 
-                  onClick={() => setCurrentStep(1)} 
-                  className="mt-4 barber-button-primary"
-                >
-                  Voltar para Seleção de Barbeiro
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="text-center py-8">
+            <p>Carregando barbeiro...</p>
+            <Button 
+              onClick={() => setCurrentStep(1)}
+              className="mt-4"
+            >
+              Voltar para seleção de barbeiro
+            </Button>
+          </div>
         )}
 
         {/* Step 4: Dados do Cliente */}
