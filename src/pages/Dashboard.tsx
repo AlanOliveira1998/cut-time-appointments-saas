@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
 
 const Dashboard: React.FC = () => {
@@ -80,17 +81,8 @@ const Dashboard: React.FC = () => {
   }
 
   const getPublicBookingUrl = () => {
-    if (!profile?.name) return `${window.location.origin}/booking/barbeiro`;
-    
-    const barberSlug = profile.name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
-      .replace(/\s+/g, '-') // Substitui espaços por hífens
-      .trim();
-    
-    return `${window.location.origin}/booking/${barberSlug}`;
+    // Agora direciona para a página geral de agendamento onde o cliente pode escolher qualquer barbeiro
+    return `${window.location.origin}/booking`;
   };
 
   const copyBookingUrl = () => {
@@ -151,25 +143,72 @@ const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <ExternalLink className="w-5 h-5 text-[#00657C]" />
-              <span>Sua Página de Agendamento</span>
+              <span>Links de Agendamento</span>
             </CardTitle>
             <CardDescription>
-              Compartilhe este link com seus clientes para que eles possam agendar online
+              Compartilhe estes links com seus clientes para agendamentos online
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 p-3 bg-gray-50 rounded-lg text-sm font-mono">
-                {getPublicBookingUrl()}
+          <CardContent className="space-y-4">
+            {/* Link Geral */}
+            <div>
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Link Geral (Escolha de Barbeiro)</h4>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 p-3 bg-gray-50 rounded-lg text-sm font-mono">
+                  {getPublicBookingUrl()}
+                </div>
+                <Button onClick={copyBookingUrl} variant="outline" size="sm">
+                  Copiar
+                </Button>
+                <Button onClick={openBookingPage} className="barber-button-primary" size="sm">
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Abrir
+                </Button>
               </div>
-              <Button onClick={copyBookingUrl} variant="outline">
-                Copiar
-              </Button>
-              <Button onClick={openBookingPage} className="barber-button-primary">
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Abrir
-              </Button>
+              <p className="text-xs text-gray-500 mt-1">
+                Permite que o cliente escolha qualquer barbeiro disponível
+              </p>
             </div>
+
+            {/* Link Específico do Dono */}
+            {profile?.name && (
+              <div>
+                <h4 className="font-medium text-sm text-gray-700 mb-2">Seu Link Pessoal</h4>
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1 p-3 bg-gray-50 rounded-lg text-sm font-mono">
+                    {`${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`}
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
+                      navigator.clipboard.writeText(url);
+                      toast({
+                        title: "Link copiado!",
+                        description: "Seu link pessoal foi copiado para a área de transferência",
+                      });
+                    }} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Copiar
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
+                      window.open(url, '_blank');
+                    }} 
+                    className="barber-button-primary" 
+                    size="sm"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Abrir
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Direciona diretamente para agendamentos com você
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
