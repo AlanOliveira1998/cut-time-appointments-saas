@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users } from 'lucide-react';
+import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users, Menu, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
 
@@ -19,6 +19,7 @@ const Dashboard: React.FC = () => {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState(0);
   const [profile, setProfile] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -87,10 +88,10 @@ const Dashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-[#00657C] rounded-lg flex items-center justify-center animate-pulse">
+          <div className="w-16 h-16 mx-auto mb-4 bg-primary rounded-xl flex items-center justify-center animate-pulse">
             <Scissors className="w-8 h-8 text-white" />
           </div>
-          <p className="text-lg">Carregando...</p>
+          <p className="text-lg text-gray-600">Carregando...</p>
         </div>
       </div>
     );
@@ -101,12 +102,15 @@ const Dashboard: React.FC = () => {
   }
 
   const getPublicBookingUrl = () => {
-    // Agora direciona para a página geral de agendamento onde o cliente pode escolher qualquer barbeiro
     return `${window.location.origin}/booking`;
   };
 
   const copyBookingUrl = () => {
     navigator.clipboard.writeText(getPublicBookingUrl());
+    toast({
+      title: "Link copiado!",
+      description: "O link de agendamento foi copiado para a área de transferência",
+    });
   };
 
   const openBookingPage = () => {
@@ -121,35 +125,26 @@ const Dashboard: React.FC = () => {
         onClose={handleTrialModalClose}
       />
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-16 h-16 flex items-center justify-center">
-              <img
-                src="/logo.jpg"
-                alt="BarberTime Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">BarberTime</h1>
-              <p className="text-sm text-gray-600">Olá, {profile?.name || user.email}!</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
+      {/* Header Moderno e Responsivo */}
+      <header className="barber-header py-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          {/* Logo e Nome removidos */}
+          <div></div>
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-4">
             {/* Trial Status */}
             <div className="flex items-center space-x-2">
               {daysRemaining > 0 ? (
-                <Badge variant="outline" className="flex items-center space-x-1">
+                <Badge variant="outline" className="flex items-center space-x-1 barber-badge bg-green-50 text-green-700 border-green-200">
                   <Clock className="w-3 h-3" />
-                  <span>{daysRemaining} dias restantes</span>
+                  <span className="hidden sm:inline">{daysRemaining} dias restantes</span>
+                  <span className="sm:hidden">{daysRemaining}d</span>
                 </Badge>
               ) : (
-                <Badge variant="destructive" className="flex items-center space-x-1">
+                <Badge variant="destructive" className="flex items-center space-x-1 barber-badge">
                   <Crown className="w-3 h-3" />
-                  <span>Trial expirado</span>
+                  <span className="hidden sm:inline">Trial expirado</span>
+                  <span className="sm:hidden">Expirado</span>
                 </Badge>
               )}
             </div>
@@ -161,20 +156,63 @@ const Dashboard: React.FC = () => {
               className="flex items-center space-x-1"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sair</span>
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-4 pt-4 border-t border-gray-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {daysRemaining > 0 ? (
+                  <Badge variant="outline" className="flex items-center space-x-1 barber-badge bg-green-50 text-green-700 border-green-200">
+                    <Clock className="w-3 h-3" />
+                    <span>{daysRemaining} dias restantes</span>
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="flex items-center space-x-1 barber-badge">
+                    <Crown className="w-3 h-3" />
+                    <span>Trial expirado</span>
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                className="flex items-center space-x-1"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
-      <div className="max-w-7xl mx-auto p-4 space-y-6">
-        {/* Public Booking Link Card */}
-        <Card className="barber-card">
+      {/* Conteúdo Principal */}
+      <div className="barber-container py-6 space-y-6">
+        {/* Card de Links de Agendamento */}
+        <Card className="barber-card animate-fade-in-up">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <ExternalLink className="w-5 h-5 text-[#00657C]" />
-              <span>Links de Agendamento</span>
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <ExternalLink className="w-5 h-5 text-primary" />
+              <CardTitle className="barber-subtitle">Links de Agendamento</CardTitle>
+            </div>
             <CardDescription>
               Compartilhe estes links com seus clientes para agendamentos online
             </CardDescription>
@@ -183,19 +221,21 @@ const Dashboard: React.FC = () => {
             {/* Link Geral */}
             <div>
               <h4 className="font-medium text-sm text-gray-700 mb-2">Link Geral (Escolha de Barbeiro)</h4>
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 p-3 bg-gray-50 rounded-lg text-sm font-mono">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                <div className="flex-1 p-3 bg-gray-50 rounded-xl text-sm font-mono break-all">
                   {getPublicBookingUrl()}
                 </div>
-                <Button onClick={copyBookingUrl} variant="outline" size="sm">
-                  Copiar
-                </Button>
-                <Button onClick={openBookingPage} className="barber-button-primary" size="sm">
-                  <ExternalLink className="w-4 h-4 mr-1" />
-                  Abrir
-                </Button>
+                <div className="flex space-x-2">
+                  <Button onClick={copyBookingUrl} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                    Copiar
+                  </Button>
+                  <Button onClick={openBookingPage} className="barber-button-primary" size="sm">
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Abrir
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-2">
                 Permite que o cliente escolha qualquer barbeiro disponível
               </p>
             </div>
@@ -204,142 +244,151 @@ const Dashboard: React.FC = () => {
             {profile?.name && (
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Seu Link Pessoal</h4>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 p-3 bg-gray-50 rounded-lg text-sm font-mono">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                  <div className="flex-1 p-3 bg-gray-50 rounded-xl text-sm font-mono break-all">
                     {`${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`}
                   </div>
-                  <Button 
-                    onClick={() => {
-                      const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
-                      navigator.clipboard.writeText(url);
-                      toast({
-                        title: "Link copiado!",
-                        description: "Seu link pessoal foi copiado para a área de transferência",
-                      });
-                    }} 
-                    variant="outline" 
-                    size="sm"
-                  >
-                    Copiar
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
-                      window.open(url, '_blank');
-                    }} 
-                    className="barber-button-primary" 
-                    size="sm"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    Abrir
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button 
+                      onClick={() => {
+                        const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
+                        navigator.clipboard.writeText(url);
+                        toast({
+                          title: "Link copiado!",
+                          description: "Seu link pessoal foi copiado para a área de transferência",
+                        });
+                      }}
+                      variant="outline" 
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                    >
+                      Copiar
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        const url = `${window.location.origin}/booking/${profile.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').trim()}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="barber-button-primary" 
+                      size="sm"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Abrir
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Direciona diretamente para agendamentos com você
+                <p className="text-xs text-gray-500 mt-2">
+                  Link direto para agendamentos com você
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="agenda" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="agenda" className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4" />
-              <span>Agenda</span>
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center space-x-2">
-              <Scissors className="w-4 h-4" />
-              <span>Serviços</span>
-            </TabsTrigger>
-            <TabsTrigger value="hours" className="flex items-center space-x-2">
-              <Clock className="w-4 h-4" />
-              <span>Horários</span>
-            </TabsTrigger>
-            <TabsTrigger value="barbers" className="flex items-center space-x-2">
-              <Users className="w-4 h-4" />
-              <span>Barbeiros</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center space-x-2">
-              <User className="w-4 h-4" />
-              <span>Perfil</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Tabs de Gerenciamento */}
+        <Card className="barber-card animate-fade-in-up-delay">
+          <CardHeader>
+            <CardTitle className="barber-subtitle">Gerenciamento</CardTitle>
+            <CardDescription>
+              Gerencie seus agendamentos, serviços, horários e barbeiros
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="appointments" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
+                <TabsTrigger value="appointments" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">Agenda</span>
+                  <span className="sm:hidden">Agenda</span>
+                </TabsTrigger>
+                <TabsTrigger value="services" className="flex items-center gap-2">
+                  <Scissors className="w-4 h-4" />
+                  <span className="hidden sm:inline">Serviços</span>
+                  <span className="sm:hidden">Serviços</span>
+                </TabsTrigger>
+                <TabsTrigger value="hours" className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="hidden sm:inline">Horários</span>
+                  <span className="sm:hidden">Horários</span>
+                </TabsTrigger>
+                <TabsTrigger value="barbers" className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Barbeiros</span>
+                  <span className="sm:hidden">Barbeiros</span>
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="agenda">
-            <AppointmentsList />
-          </TabsContent>
+              <TabsContent value="appointments" className="space-y-4">
+                <AppointmentsList />
+              </TabsContent>
 
-          <TabsContent value="services">
-            <ServicesList />
-          </TabsContent>
+              <TabsContent value="services" className="space-y-4">
+                <ServicesList />
+              </TabsContent>
 
-          <TabsContent value="hours">
-            <WorkingHoursList />
-          </TabsContent>
+              <TabsContent value="hours" className="space-y-4">
+                <WorkingHoursList />
+              </TabsContent>
 
-          <TabsContent value="barbers">
-            <BarbersList />
-          </TabsContent>
+              <TabsContent value="barbers" className="space-y-4">
+                <BarbersList />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="profile">
-            <Card className="barber-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="w-5 h-5 text-[#00657C]" />
-                  <span>Informações do Perfil</span>
-                </CardTitle>
-                <CardDescription>
-                  Gerencie suas informações pessoais
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nome
-                    </label>
-                    <p className="text-gray-900">{profile?.name || 'Não informado'}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <p className="text-gray-900">{user.email}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Telefone
-                    </label>
-                    <p className="text-gray-900">{profile?.phone || 'Não informado'}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status da Conta
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      {daysRemaining > 0 ? (
-                        <Badge variant="outline" className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{daysRemaining} dias restantes do trial</span>
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="flex items-center space-x-1">
-                          <Crown className="w-3 h-3" />
-                          <span>Trial expirado - Ative seu plano</span>
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+        {/* Card de Perfil */}
+        <Card className="barber-card animate-fade-in-up-delay">
+          <CardHeader>
+            <CardTitle className="barber-subtitle flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Perfil da Conta
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome
+                </label>
+                <p className="text-gray-900 font-medium">{profile?.name || 'Não informado'}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mail
+                </label>
+                <p className="text-gray-900 font-medium">{user.email}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefone
+                </label>
+                <p className="text-gray-900 font-medium">{profile?.phone || 'Não informado'}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status da Conta
+                </label>
+                <div className="flex items-center space-x-2">
+                  {daysRemaining > 0 ? (
+                    <Badge variant="outline" className="flex items-center space-x-1 barber-badge bg-green-50 text-green-700 border-green-200">
+                      <Clock className="w-3 h-3" />
+                      <span>{daysRemaining} dias restantes do trial</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="flex items-center space-x-1 barber-badge">
+                      <Crown className="w-3 h-3" />
+                      <span>Trial expirado - Ative seu plano</span>
+                    </Badge>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
