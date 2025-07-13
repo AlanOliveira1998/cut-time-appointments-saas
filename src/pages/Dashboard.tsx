@@ -29,6 +29,7 @@ const Dashboard: React.FC = () => {
   const [financeStatus, setFinanceStatus] = useState<'all'|'scheduled'|'completed'|'cancelled'>('all');
   const [financeStart, setFinanceStart] = useState('');
   const [financeEnd, setFinanceEnd] = useState('');
+  const [barbershopLogo, setBarbershopLogo] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -36,6 +37,7 @@ const Dashboard: React.FC = () => {
     if (user) {
       loadProfile();
       calculateTrialDays();
+      loadBarbershopLogo();
       
       // Verificar se o trial expirou
       if (isTrialExpired()) {
@@ -55,6 +57,53 @@ const Dashboard: React.FC = () => {
       }
     }
   }, [user, loading, isTrialExpired, showTrialModal]);
+
+  // Carregar logo da barbearia
+  const loadBarbershopLogo = async () => {
+    if (!user) return;
+
+    try {
+      // Por enquanto, vamos usar uma abordagem mais simples
+      // até que a migration seja aplicada
+      const storedLogo = localStorage.getItem(`barbershop_logo_${user.id}`);
+      if (storedLogo) {
+        setBarbershopLogo(storedLogo);
+      }
+    } catch (error) {
+      console.error('Error loading barbershop logo:', error);
+    }
+  };
+
+  // Upload da logo
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      // Por enquanto, vamos usar uma abordagem mais simples
+      // Convertendo a imagem para base64 e salvando no localStorage
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (result) {
+          setBarbershopLogo(result);
+          localStorage.setItem(`barbershop_logo_${user.id}`, result);
+          toast({
+            title: "Logo atualizada!",
+            description: "A logo da sua barbearia foi atualizada com sucesso.",
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "Erro ao atualizar logo",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Carregar todos os agendamentos para o financeiro e dashboards
   useEffect(() => {
@@ -185,7 +234,9 @@ const Dashboard: React.FC = () => {
         <div className="barber-container flex items-center justify-between h-16">
           {/* Logo (opcional) */}
           <div className="flex items-center gap-2">
-            {/* <img src='/logo.jpg' alt='Logo' className='w-8 h-8 rounded-full' /> */}
+            {barbershopLogo && (
+              <img src={barbershopLogo} alt="Barbearia Logo" className="w-8 h-8 rounded-full" />
+            )}
           </div>
           {/* Menu desktop */}
           <ul className="hidden md:flex items-center gap-6 text-gray-800 font-medium text-base">
@@ -355,6 +406,41 @@ const Dashboard: React.FC = () => {
                           <span>Trial expirado - Ative seu plano</span>
                         </Badge>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logo da Barbearia */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-4">Logo da Barbearia</h4>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                      {barbershopLogo ? (
+                        <img 
+                          src={barbershopLogo} 
+                          alt="Logo da Barbearia" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Scissors className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-2">
+                        {barbershopLogo 
+                          ? "Sua logo aparece na navbar e nos links de agendamento" 
+                          : "Adicione a logo da sua barbearia para personalizar o sistema"
+                        }
+                      </p>
+                      <label className="barber-button-primary cursor-pointer inline-flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+                        {barbershopLogo ? 'Alterar Logo' : 'Adicionar Logo'}
+                      </label>
                     </div>
                   </div>
                 </div>
