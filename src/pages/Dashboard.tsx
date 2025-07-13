@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users, Menu, X, Home } from 'lucide-react';
+import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users, Menu, X, Home, DollarSign, BarChart2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 
 const Dashboard: React.FC = () => {
   const { user, logout, isTrialExpired, loading } = useAuth();
@@ -22,6 +23,12 @@ const Dashboard: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tab, setTab] = useState('home'); // Começa na Home
+  const [selectedBarberFinance, setSelectedBarberFinance] = useState<'all' | string>('all');
+  const [financeAppointments, setFinanceAppointments] = useState<any[]>([]);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeStatus, setFinanceStatus] = useState<'all'|'scheduled'|'completed'|'cancelled'>('all');
+  const [financeStart, setFinanceStart] = useState('');
+  const [financeEnd, setFinanceEnd] = useState('');
 
   const navigate = useNavigate();
 
@@ -48,6 +55,56 @@ const Dashboard: React.FC = () => {
       }
     }
   }, [user, loading, isTrialExpired, showTrialModal]);
+
+  // Carregar todos os agendamentos para o financeiro
+  useEffect(() => {
+    if (tab === 'finance') {
+      setFinanceLoading(true);
+      supabase
+        .from('appointments')
+        .select('*, barbers:barber_id(*, profiles(*)), services:service_id(name, price, duration)')
+        .then(({ data, error }) => {
+          setFinanceLoading(false);
+          if (!error && data) setFinanceAppointments(data);
+        });
+    }
+  }, [tab]);
+
+  // Exportação CSV
+  function exportFinanceCSV() {
+    const header = ['Barbeiro','Serviço','Cliente','Data','Hora','Valor','Status'];
+    const rows = financeAppointments
+      .filter(a => (selectedBarberFinance === 'all' || (a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono') === selectedBarberFinance))
+      .filter(a => (financeStatus === 'all' || a.status === financeStatus))
+      .filter(a => (!financeStart || a.appointment_date >= financeStart))
+      .filter(a => (!financeEnd || a.appointment_date <= financeEnd))
+      .map(a => [
+        a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono',
+        a.services?.name || '-',
+        a.client_name,
+        a.appointment_date,
+        a.appointment_time,
+        a.services?.price ? a.services.price.toFixed(2) : '-',
+        a.status
+      ]);
+    const csv = [header, ...rows].map(r => r.join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'financeiro.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Totais filtrados
+  const filteredFinance = financeAppointments
+    .filter(a => (selectedBarberFinance === 'all' || (a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono') === selectedBarberFinance))
+    .filter(a => (financeStatus === 'all' || a.status === financeStatus))
+    .filter(a => (!financeStart || a.appointment_date >= financeStart))
+    .filter(a => (!financeEnd || a.appointment_date <= financeEnd));
+  const totalValue = filteredFinance.reduce((acc, a) => acc + (a.services?.price || 0), 0);
+  const totalCount = filteredFinance.length;
 
   const loadProfile = async () => {
     if (!user) return;
@@ -137,6 +194,7 @@ const Dashboard: React.FC = () => {
             <li><button onClick={()=>setTab('services')} className={tab==='services'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><Scissors className="w-5 h-5"/>Serviços</button></li>
             <li><button onClick={()=>setTab('hours')} className={tab==='hours'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><Clock className="w-5 h-5"/>Horários</button></li>
             <li><button onClick={()=>setTab('barbers')} className={tab==='barbers'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><Users className="w-5 h-5"/>Barbeiros</button></li>
+            <li><button onClick={()=>setTab('finance')} className={tab==='finance'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><DollarSign className="w-5 h-5"/>Financeiro</button></li>
             <li><button onClick={logout} className="flex items-center gap-1 text-red-600"><LogOut className="w-5 h-5"/>Sair</button></li>
           </ul>
           {/* Menu mobile */}
@@ -155,6 +213,7 @@ const Dashboard: React.FC = () => {
               <li><button onClick={()=>{setTab('services');setMobileMenuOpen(false);}} className={tab==='services'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><Scissors className="w-5 h-5"/>Serviços</button></li>
               <li><button onClick={()=>{setTab('hours');setMobileMenuOpen(false);}} className={tab==='hours'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><Clock className="w-5 h-5"/>Horários</button></li>
               <li><button onClick={()=>{setTab('barbers');setMobileMenuOpen(false);}} className={tab==='barbers'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><Users className="w-5 h-5"/>Barbeiros</button></li>
+              <li><button onClick={()=>{setTab('finance');setMobileMenuOpen(false);}} className={tab==='finance'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><DollarSign className="w-5 h-5"/>Financeiro</button></li>
               <li><button onClick={()=>{setMobileMenuOpen(false);logout();}} className="flex items-center gap-2 text-red-600"><LogOut className="w-5 h-5"/>Sair</button></li>
             </ul>
           </div>
@@ -300,6 +359,171 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           </>
+        )}
+        {/* FINANCEIRO */}
+        {tab === 'finance' && (
+          <Card className="barber-card animate-fade-in-up-delay">
+            <CardHeader>
+              <CardTitle className="barber-subtitle flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" />
+                Financeiro
+              </CardTitle>
+              <CardDescription>Veja todos os serviços executados e agendados, filtrando por barbeiro, período e status.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 flex flex-col sm:flex-row gap-2 items-start sm:items-center flex-wrap">
+                <label className="font-medium text-sm">Barbeiro:</label>
+                <select
+                  className="barber-input w-auto"
+                  value={selectedBarberFinance}
+                  onChange={e => setSelectedBarberFinance(e.target.value)}
+                >
+                  <option value="all">Todos</option>
+                  {Array.from(new Set(financeAppointments.map(a => a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono'))).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <label className="font-medium text-sm ml-2">Status:</label>
+                <select
+                  className="barber-input w-auto"
+                  value={financeStatus}
+                  onChange={e => setFinanceStatus(e.target.value as any)}
+                >
+                  <option value="all">Todos</option>
+                  <option value="scheduled">Agendado</option>
+                  <option value="completed">Concluído</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+                <label className="font-medium text-sm ml-2">Período:</label>
+                <input type="date" className="barber-input w-auto" value={financeStart} onChange={e=>setFinanceStart(e.target.value)} />
+                <span className="mx-1">-</span>
+                <input type="date" className="barber-input w-auto" value={financeEnd} onChange={e=>setFinanceEnd(e.target.value)} />
+                <Button onClick={exportFinanceCSV} size="sm" className="ml-auto bg-primary text-white flex items-center gap-1"><BarChart2 className="w-4 h-4"/>Exportar CSV</Button>
+              </div>
+              <div className="mb-4 flex flex-wrap gap-4">
+                <div className="bg-gray-100 rounded-lg px-4 py-2 text-sm font-medium">Total de serviços: <span className="font-bold">{totalCount}</span></div>
+                <div className="bg-gray-100 rounded-lg px-4 py-2 text-sm font-medium">Valor total: <span className="font-bold text-green-700">R$ {totalValue.toFixed(2)}</span></div>
+              </div>
+              {/* GRÁFICOS FINANCEIRO */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Gráfico de Barras: Valor por Barbeiro */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Faturamento por Barbeiro</h4>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={(() => {
+                      // Agrupa valor por barbeiro
+                      const map = new Map();
+                      filteredFinance.forEach(a => {
+                        const name = a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono';
+                        map.set(name, (map.get(name) || 0) + (a.services?.price || 0));
+                      });
+                      return Array.from(map, ([name, value]) => ({ name, value }));
+                    })()}>
+                      <XAxis dataKey="name" fontSize={12} />
+                      <YAxis fontSize={12} tickFormatter={v => `R$ ${v}`}/>
+                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Valor']} />
+                      <Bar dataKey="value" fill="#00657C" radius={[6,6,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Gráfico de Pizza: Distribuição por Serviço */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Distribuição de Serviços</h4>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={(() => {
+                          // Agrupa quantidade por serviço
+                          const map = new Map();
+                          filteredFinance.forEach(a => {
+                            const name = a.services?.name || '-';
+                            map.set(name, (map.get(name) || 0) + 1);
+                          });
+                          return Array.from(map, ([name, value]) => ({ name, value }));
+                        })()}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        fill="#00657C"
+                        label={({ name, percent }) => `${name} (${(percent*100).toFixed(0)}%)`}
+                      >
+                        {(() => {
+                          const colors = ['#00657C', '#E63946', '#22223B', '#F1FAEE', '#A8DADC', '#457B9D'];
+                          const data = (() => {
+                            const map = new Map();
+                            filteredFinance.forEach(a => {
+                              const name = a.services?.name || '-';
+                              map.set(name, (map.get(name) || 0) + 1);
+                            });
+                            return Array.from(map);
+                          })();
+                          return data.map((entry, idx) => <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />);
+                        })()}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [value, name]} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Gráfico de Linha: Faturamento por Data */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Faturamento por Data</h4>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={(() => {
+                      // Agrupa valor por data
+                      const map = new Map();
+                      filteredFinance.forEach(a => {
+                        const date = a.appointment_date;
+                        map.set(date, (map.get(date) || 0) + (a.services?.price || 0));
+                      });
+                      // Ordena por data
+                      return Array.from(map, ([date, value]) => ({ date, value })).sort((a,b) => a.date.localeCompare(b.date));
+                    })()}>
+                      <XAxis dataKey="date" fontSize={12} />
+                      <YAxis fontSize={12} tickFormatter={v => `R$ ${v}`}/>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Faturamento']} />
+                      <Line type="monotone" dataKey="value" stroke="#E63946" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left">Barbeiro</th>
+                      <th className="px-3 py-2 text-left">Serviço</th>
+                      <th className="px-3 py-2 text-left">Cliente</th>
+                      <th className="px-3 py-2 text-left">Data</th>
+                      <th className="px-3 py-2 text-left">Hora</th>
+                      <th className="px-3 py-2 text-left">Valor</th>
+                      <th className="px-3 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financeLoading ? (
+                      <tr><td colSpan={7} className="text-center py-8">Carregando...</td></tr>
+                    ) : (
+                      filteredFinance.map(a => (
+                        <tr key={a.id} className="border-b">
+                          <td className="px-3 py-2">{a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono'}</td>
+                          <td className="px-3 py-2">{a.services?.name || '-'}</td>
+                          <td className="px-3 py-2">{a.client_name}</td>
+                          <td className="px-3 py-2">{a.appointment_date}</td>
+                          <td className="px-3 py-2">{a.appointment_time}</td>
+                          <td className="px-3 py-2">R$ {a.services?.price ? a.services.price.toFixed(2) : '-'}</td>
+                          <td className="px-3 py-2">{a.status}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
         {/* Outras abas */}
         {tab === 'appointments' && (
