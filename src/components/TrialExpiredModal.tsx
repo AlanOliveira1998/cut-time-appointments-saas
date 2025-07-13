@@ -17,11 +17,11 @@ export const TrialExpiredModal: React.FC<TrialExpiredModalProps> = ({ isOpen, on
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4">
+          <div className="flex items-center justify-center w-32 h-32 mx-auto mb-4">
             <img 
-              src="/lovable-Uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
+              src="/logo.jpg" 
               alt="BarberTime Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain" 
             />
           </div>
           <DialogTitle className="text-center text-xl font-semibold barber-text-primary">
