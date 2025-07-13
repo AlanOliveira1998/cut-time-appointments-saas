@@ -107,6 +107,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
         </button>
       </form>
 
+      {/* Separador */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">ou</span>
+        </div>
+      </div>
+
+      {/* Botão do Google */}
+      {/* Remover bloco do botão Google */}
+
       <div className="mt-6 text-center space-y-4">
         <button className="text-slate-600 hover:text-slate-800 transition-colors">
           Esqueceu a senha?
