@@ -27,10 +27,22 @@ const Dashboard: React.FC = () => {
       
       // Verificar se o trial expirou
       if (isTrialExpired()) {
+        console.log('Trial expirado - exibindo modal');
         setShowTrialModal(true);
       }
     }
   }, [user, isTrialExpired]);
+
+  // Verificação adicional para garantir que o modal seja exibido
+  useEffect(() => {
+    if (user && !loading) {
+      const trialExpired = isTrialExpired();
+      if (trialExpired && !showTrialModal) {
+        console.log('Trial expirado detectado - exibindo modal');
+        setShowTrialModal(true);
+      }
+    }
+  }, [user, loading, isTrialExpired, showTrialModal]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -61,6 +73,14 @@ const Dashboard: React.FC = () => {
     const daysPassed = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
     const remaining = Math.max(0, 7 - daysPassed);
     setDaysRemaining(remaining);
+  };
+
+  const handleTrialModalClose = () => {
+    // Não permitir fechar o modal se o trial expirou
+    if (isTrialExpired()) {
+      // Redirecionar para a página de compra
+      window.open('https://kiwify.app/PYxzlNE', '_blank');
+    }
   };
 
   if (loading) {
@@ -95,6 +115,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Trial Expired Modal */}
+      <TrialExpiredModal 
+        isOpen={showTrialModal} 
+        onClose={handleTrialModalClose}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -261,51 +287,49 @@ const Dashboard: React.FC = () => {
                   <span>Informações do Perfil</span>
                 </CardTitle>
                 <CardDescription>
-                  Suas informações cadastrais
+                  Gerencie suas informações pessoais
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent>
+                <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Nome</label>
-                    <p className="text-lg">{profile?.name || 'Não informado'}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nome
+                    </label>
+                    <p className="text-gray-900">{profile?.name || 'Não informado'}</p>
                   </div>
+                  
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Email</label>
-                    <p className="text-lg">{user.email}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <p className="text-gray-900">{user.email}</p>
                   </div>
+                  
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Telefone</label>
-                    <p className="text-lg">{profile?.phone || 'Não informado'}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Telefone
+                    </label>
+                    <p className="text-gray-900">{profile?.phone || 'Não informado'}</p>
                   </div>
+                  
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Conta criada em</label>
-                    <p className="text-lg">
-                      {new Date(profile?.created_at || user.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Status da conta</h3>
-                      <p className="text-sm text-gray-600">
-                        {daysRemaining > 0 
-                          ? `Período gratuito - ${daysRemaining} dias restantes`
-                          : 'Período gratuito expirado'
-                        }
-                      </p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status da Conta
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      {daysRemaining > 0 ? (
+                        <Badge variant="outline" className="flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{daysRemaining} dias restantes do trial</span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="flex items-center space-x-1">
+                          <Crown className="w-3 h-3" />
+                          <span>Trial expirado - Ative seu plano</span>
+                        </Badge>
+                      )}
                     </div>
-                    {daysRemaining === 0 && (
-                      <Button 
-                        onClick={() => window.open('https://pay.kiwify.com.br/jhpskLr', '_blank')}
-                        className="barber-button-primary"
-                      >
-                        <Crown className="w-4 h-4 mr-2" />
-                        Ativar Plano
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -313,12 +337,6 @@ const Dashboard: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Trial Expired Modal */}
-      <TrialExpiredModal 
-        isOpen={showTrialModal} 
-        onClose={() => setShowTrialModal(false)} 
-      />
     </div>
   );
 };
