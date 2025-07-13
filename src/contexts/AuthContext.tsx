@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -30,24 +29,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Primeiro, pegar a sessão atual
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Configurar listener para mudanças de estado
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Só definir loading como false após a inicialização completa
+          if (loading) {
+            setLoading(false);
+          }
+        }
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Inicializar autenticação
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -79,6 +108,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('Login error:', error);
+      toast({
+        title: "Erro no login",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
       return false;
     } finally {
       setLoading(false);
@@ -113,16 +147,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora.",
-        });
+        // Verificar se o usuário precisa confirmar email
+        if (data.user.email_confirmed_at) {
+          toast({
+            title: "Conta criada com sucesso!",
+            description: "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora.",
+          });
+        } else {
+          toast({
+            title: "Conta criada!",
+            description: "Verifique seu email para confirmar a conta.",
+          });
+        }
         return true;
       }
       
       return false;
     } catch (error) {
       console.error('Register error:', error);
+      toast({
+        title: "Erro no cadastro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
       return false;
     } finally {
       setLoading(false);
@@ -131,48 +178,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      // Limpar estado local primeiro
+      setLoading(true);
+      
+      // Usar o signOut do Supabase que já limpa tudo corretamente
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        // Mesmo com erro, limpar o estado local
+      }
+      
+      // Limpar estado local
       setSession(null);
       setUser(null);
-      
-      // Limpar localStorage do Supabase
-      const keys = Object.keys(localStorage).filter(key => 
-        key.startsWith('supabase.') || key.includes('sb-')
-      );
-      keys.forEach(key => localStorage.removeItem(key));
-      
-      // Tentar signOut apenas se há uma sessão
-      if (session) {
-        const { error } = await supabase.auth.signOut();
-        if (error && error.message !== 'Auth session missing!') {
-          console.error('Logout error:', error);
-        }
-      }
       
       toast({
         title: "Logout realizado",
         description: "Até logo!",
       });
       
-      // Forçar redirecionamento para página inicial
+      // Redirecionar para página inicial
       window.location.href = '/';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Logout error:', error);
       // Mesmo com erro, limpar estado e redirecionar
       setSession(null);
       setUser(null);
       window.location.href = '/';
+    } finally {
+      setLoading(false);
     }
   };
 
   const isTrialExpired = (): boolean => {
     if (!user?.created_at) return false;
     
-    const now = new Date();
-    const createdDate = new Date(user.created_at);
-    const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    return daysDiff >= 7;
+    try {
+      const now = new Date();
+      const createdDate = new Date(user.created_at);
+      const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return daysDiff >= 7;
+    } catch (error) {
+      console.error('Error checking trial expiration:', error);
+      return false;
+    }
   };
 
   return (
