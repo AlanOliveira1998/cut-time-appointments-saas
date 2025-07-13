@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Scissors } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
@@ -29,7 +29,7 @@ interface Barber {
 }
 
 export const Booking: React.FC = () => {
-  const { barbers, loading: loadingBarbers } = useBarbers();
+  const { filteredBarbers, loading: loadingBarbers } = useBarbers();
   
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -42,10 +42,44 @@ export const Booking: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isBookingComplete, setIsBookingComplete] = useState(false);
 
+  // Debug: Log selectedBarber changes
+  useEffect(() => {
+    console.log('=== DEBUG BOOKING (pages) ===');
+    console.log('selectedBarber:', selectedBarber);
+    console.log('Current step:', currentStep);
+    console.log('Selected service:', selectedService);
+    console.log('filteredBarbers length:', filteredBarbers.length);
+    console.log('========================');
+  }, [selectedBarber, currentStep, selectedService, filteredBarbers]);
+
   // Carregar dados do barbeiro selecionado
   const { services, workingHours, appointments, loading: loadingBarberData, loadAppointments } = useBookingData(
     selectedBarber?.id
   );
+
+  // Sempre que a lista de barbeiros mudar e não houver barbeiro selecionado, selecione o primeiro
+  useEffect(() => {
+    if (filteredBarbers.length > 0 && !selectedBarber) {
+      console.log('Selecionando primeiro barbeiro automaticamente:', filteredBarbers[0]);
+      setSelectedBarber(filteredBarbers[0]);
+    }
+  }, [filteredBarbers, selectedBarber]);
+
+  // Se chegar na etapa 3 sem barbeiro, volte para etapa 1
+  useEffect(() => {
+    if (currentStep === 3 && !selectedBarber) {
+      console.log('Etapa 3 sem barbeiro selecionado, voltando para etapa 1');
+      setCurrentStep(1);
+    }
+  }, [currentStep, selectedBarber]);
+
+  // Garantir que não avance para etapa 3 sem barbeiro
+  useEffect(() => {
+    if (currentStep === 3 && !selectedBarber) {
+      console.log('Bloqueando avanço para etapa 3 sem barbeiro');
+      setCurrentStep(1);
+    }
+  }, [currentStep, selectedBarber]);
 
   React.useEffect(() => {
     if (selectedService && selectedDate && selectedBarber) {
@@ -55,11 +89,21 @@ export const Booking: React.FC = () => {
   }, [selectedService, selectedDate, appointments, workingHours, selectedBarber, services]);
 
   const handleBarberSelect = (barber: Barber) => {
+    console.log('Barbeiro selecionado manualmente:', barber);
     setSelectedBarber(barber);
+    setSelectedService(null); // Resetar serviço selecionado
+    setSelectedDate(''); // Resetar data selecionada
+    setSelectedTime(''); // Resetar horário selecionado
     setCurrentStep(2);
   };
 
   const handleServiceSelect = (service: Service) => {
+    if (!selectedBarber) {
+      console.log('Tentativa de selecionar serviço sem barbeiro, voltando para etapa 1');
+      setCurrentStep(1);
+      return;
+    }
+    console.log('Serviço selecionado:', service);
     setSelectedService(service);
     setCurrentStep(3);
   };
@@ -154,6 +198,7 @@ export const Booking: React.FC = () => {
           phone: selectedBarber.profiles?.phone || selectedBarber.employee_phone || '', 
           created_at: '' 
         }}
+        selectedBarber={selectedBarber}
         selectedService={selectedService}
         selectedDate={selectedDate}
         selectedTime={selectedTime}
@@ -183,7 +228,7 @@ export const Booking: React.FC = () => {
         {/* Step 1: Selecionar Barbeiro */}
         {currentStep === 1 && (
           <BarberSelection
-            barbers={barbers}
+            barbers={filteredBarbers}
             onBarberSelect={handleBarberSelect}
           />
         )}
@@ -192,6 +237,7 @@ export const Booking: React.FC = () => {
         {currentStep === 2 && selectedBarber && (
           <ServiceSelection
             services={services}
+            selectedBarber={selectedBarber}
             onServiceSelect={handleServiceSelect}
           />
         )}
@@ -200,6 +246,7 @@ export const Booking: React.FC = () => {
         {currentStep === 3 && selectedService && selectedBarber && (
           <DateTimeSelection
             selectedService={selectedService}
+            selectedBarber={selectedBarber}
             selectedDate={selectedDate}
             selectedTime={selectedTime}
             availableSlots={availableSlots}
@@ -212,10 +259,24 @@ export const Booking: React.FC = () => {
             onContinue={handleDateTimeSelect}
           />
         )}
+        
+        {/* Fallback para etapa 3 sem barbeiro */}
+        {currentStep === 3 && selectedService && !selectedBarber && (
+          <div className="text-center py-8">
+            <p>Carregando barbeiro...</p>
+            <button 
+              onClick={() => setCurrentStep(1)}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Voltar para seleção de barbeiro
+            </button>
+          </div>
+        )}
 
         {/* Step 4: Dados do Cliente */}
         {currentStep === 4 && selectedService && selectedBarber && (
           <ClientDataForm
+            selectedBarber={selectedBarber}
             selectedService={selectedService}
             selectedDate={selectedDate}
             selectedTime={selectedTime}
