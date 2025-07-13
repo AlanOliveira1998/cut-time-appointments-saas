@@ -9,7 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  isTrialExpired: () => boolean;
+  isTrialExpired: () => Promise<boolean>;
   loading: boolean;
 }
 
@@ -210,8 +210,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isTrialExpired = (): boolean => {
-    if (!user?.created_at) return false;
+  const isTrialExpired = async (): Promise<boolean> => {
+    if (!user?.id) return false;
     
     // Exceção para o usuário de teste
     if (user.email === "alan.pires.oliveira@gmail.com") {
@@ -220,13 +220,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
+      // Verificar status da assinatura no banco
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('subscription_status, subscription_end_date')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking subscription status:', error);
+        // Fallback para verificação antiga
+        return checkTrialByDate();
+      }
+
+      // Se tem assinatura ativa, não expirou
+      if (profile?.subscription_status === 'active') {
+        return false;
+      }
+
+      // Se tem assinatura cancelada ou expirada, verificar se ainda está no período
+      if (profile?.subscription_end_date) {
+        const endDate = new Date(profile.subscription_end_date);
+        if (endDate > new Date()) {
+          return false; // Ainda válida
+        }
+      }
+
+      // Fallback para verificação por data de criação
+      return checkTrialByDate();
+    } catch (error) {
+      console.error('Error checking trial expiration:', error);
+      return checkTrialByDate();
+    }
+  };
+
+  // Função auxiliar para verificar trial por data (fallback)
+  const checkTrialByDate = (): boolean => {
+    if (!user?.created_at) return false;
+    
+    try {
       const now = new Date();
       const createdDate = new Date(user.created_at);
       const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
       
       return daysDiff >= 7;
     } catch (error) {
-      console.error('Error checking trial expiration:', error);
+      console.error('Error checking trial by date:', error);
       return false;
     }
   };
