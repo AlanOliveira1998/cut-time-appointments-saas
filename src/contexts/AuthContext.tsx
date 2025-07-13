@@ -213,6 +213,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isTrialExpired = (): boolean => {
     if (!user?.created_at) return false;
     
+    // Exceção para o usuário de teste
+    if (user.email === "alan.pires.oliveira@gmail.com") {
+      console.log('Usuário de teste detectado - trial sempre válido');
+      return false;
+    }
+    
     try {
       const now = new Date();
       const createdDate = new Date(user.created_at);
