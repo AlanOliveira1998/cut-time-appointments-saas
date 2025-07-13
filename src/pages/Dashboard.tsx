@@ -56,9 +56,9 @@ const Dashboard: React.FC = () => {
     }
   }, [user, loading, isTrialExpired, showTrialModal]);
 
-  // Carregar todos os agendamentos para o financeiro
+  // Carregar todos os agendamentos para o financeiro e dashboards
   useEffect(() => {
-    if (tab === 'finance') {
+    if (tab === 'finance' || tab === 'dashboards') {
       setFinanceLoading(true);
       supabase
         .from('appointments')
@@ -195,6 +195,7 @@ const Dashboard: React.FC = () => {
             <li><button onClick={()=>setTab('hours')} className={tab==='hours'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><Clock className="w-5 h-5"/>Horários</button></li>
             <li><button onClick={()=>setTab('barbers')} className={tab==='barbers'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><Users className="w-5 h-5"/>Barbeiros</button></li>
             <li><button onClick={()=>setTab('finance')} className={tab==='finance'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><DollarSign className="w-5 h-5"/>Financeiro</button></li>
+            <li><button onClick={()=>setTab('dashboards')} className={tab==='dashboards'?'text-primary flex items-center gap-1':'flex items-center gap-1'}><BarChart2 className="w-5 h-5"/>Dashboards</button></li>
             <li><button onClick={logout} className="flex items-center gap-1 text-red-600"><LogOut className="w-5 h-5"/>Sair</button></li>
           </ul>
           {/* Menu mobile */}
@@ -214,6 +215,7 @@ const Dashboard: React.FC = () => {
               <li><button onClick={()=>{setTab('hours');setMobileMenuOpen(false);}} className={tab==='hours'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><Clock className="w-5 h-5"/>Horários</button></li>
               <li><button onClick={()=>{setTab('barbers');setMobileMenuOpen(false);}} className={tab==='barbers'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><Users className="w-5 h-5"/>Barbeiros</button></li>
               <li><button onClick={()=>{setTab('finance');setMobileMenuOpen(false);}} className={tab==='finance'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><DollarSign className="w-5 h-5"/>Financeiro</button></li>
+              <li><button onClick={()=>{setTab('dashboards');setMobileMenuOpen(false);}} className={tab==='dashboards'?'text-primary flex items-center gap-2':'flex items-center gap-2'}><BarChart2 className="w-5 h-5"/>Dashboards</button></li>
               <li><button onClick={()=>{setMobileMenuOpen(false);logout();}} className="flex items-center gap-2 text-red-600"><LogOut className="w-5 h-5"/>Sair</button></li>
             </ul>
           </div>
@@ -400,96 +402,6 @@ const Dashboard: React.FC = () => {
                 <input type="date" className="barber-input w-auto" value={financeEnd} onChange={e=>setFinanceEnd(e.target.value)} />
                 <Button onClick={exportFinanceCSV} size="sm" className="ml-auto bg-primary text-white flex items-center gap-1"><BarChart2 className="w-4 h-4"/>Exportar CSV</Button>
               </div>
-              <div className="mb-4 flex flex-wrap gap-4">
-                <div className="bg-gray-100 rounded-lg px-4 py-2 text-sm font-medium">Total de serviços: <span className="font-bold">{totalCount}</span></div>
-                <div className="bg-gray-100 rounded-lg px-4 py-2 text-sm font-medium">Valor total: <span className="font-bold text-green-700">R$ {totalValue.toFixed(2)}</span></div>
-              </div>
-              {/* GRÁFICOS FINANCEIRO */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Gráfico de Barras: Valor por Barbeiro */}
-                <div className="bg-white rounded-xl shadow p-4">
-                  <h4 className="font-semibold text-sm mb-2">Faturamento por Barbeiro</h4>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={(() => {
-                      // Agrupa valor por barbeiro
-                      const map = new Map();
-                      filteredFinance.forEach(a => {
-                        const name = a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono';
-                        map.set(name, (map.get(name) || 0) + (a.services?.price || 0));
-                      });
-                      return Array.from(map, ([name, value]) => ({ name, value }));
-                    })()}>
-                      <XAxis dataKey="name" fontSize={12} />
-                      <YAxis fontSize={12} tickFormatter={v => `R$ ${v}`}/>
-                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Valor']} />
-                      <Bar dataKey="value" fill="#00657C" radius={[6,6,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Gráfico de Pizza: Distribuição por Serviço */}
-                <div className="bg-white rounded-xl shadow p-4">
-                  <h4 className="font-semibold text-sm mb-2">Distribuição de Serviços</h4>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={(() => {
-                          // Agrupa quantidade por serviço
-                          const map = new Map();
-                          filteredFinance.forEach(a => {
-                            const name = a.services?.name || '-';
-                            map.set(name, (map.get(name) || 0) + 1);
-                          });
-                          return Array.from(map, ([name, value]) => ({ name, value }));
-                        })()}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={70}
-                        fill="#00657C"
-                        label={({ name, percent }) => `${name} (${(percent*100).toFixed(0)}%)`}
-                      >
-                        {(() => {
-                          const colors = ['#00657C', '#E63946', '#22223B', '#F1FAEE', '#A8DADC', '#457B9D'];
-                          const data = (() => {
-                            const map = new Map();
-                            filteredFinance.forEach(a => {
-                              const name = a.services?.name || '-';
-                              map.set(name, (map.get(name) || 0) + 1);
-                            });
-                            return Array.from(map);
-                          })();
-                          return data.map((entry, idx) => <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />);
-                        })()}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [value, name]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Gráfico de Linha: Faturamento por Data */}
-                <div className="bg-white rounded-xl shadow p-4">
-                  <h4 className="font-semibold text-sm mb-2">Faturamento por Data</h4>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={(() => {
-                      // Agrupa valor por data
-                      const map = new Map();
-                      filteredFinance.forEach(a => {
-                        const date = a.appointment_date;
-                        map.set(date, (map.get(date) || 0) + (a.services?.price || 0));
-                      });
-                      // Ordena por data
-                      return Array.from(map, ([date, value]) => ({ date, value })).sort((a,b) => a.date.localeCompare(b.date));
-                    })()}>
-                      <XAxis dataKey="date" fontSize={12} />
-                      <YAxis fontSize={12} tickFormatter={v => `R$ ${v}`}/>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Faturamento']} />
-                      <Line type="monotone" dataKey="value" stroke="#E63946" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -521,6 +433,225 @@ const Dashboard: React.FC = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {/* DASHBOARDS */}
+        {tab === 'dashboards' && (
+          <Card className="barber-card animate-fade-in-up-delay">
+            <CardHeader>
+              <CardTitle className="barber-subtitle flex items-center gap-2">
+                <BarChart2 className="w-5 h-5 text-primary" />
+                Dashboards
+              </CardTitle>
+              <CardDescription>Visualize métricas detalhadas da sua barbearia.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtros para os gráficos */}
+              <div className="mb-6 flex flex-col sm:flex-row gap-2 items-start sm:items-center flex-wrap">
+                <label className="font-medium text-sm">Barbeiro:</label>
+                <select
+                  className="barber-input w-auto"
+                  value={selectedBarberFinance}
+                  onChange={e => setSelectedBarberFinance(e.target.value)}
+                >
+                  <option value="all">Todos</option>
+                  {Array.from(new Set(financeAppointments.map(a => a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono'))).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <label className="font-medium text-sm ml-2">Status:</label>
+                <select
+                  className="barber-input w-auto"
+                  value={financeStatus}
+                  onChange={e => setFinanceStatus(e.target.value as any)}
+                >
+                  <option value="all">Todos</option>
+                  <option value="scheduled">Agendado</option>
+                  <option value="completed">Concluído</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+                <label className="font-medium text-sm ml-2">Período:</label>
+                <input type="date" className="barber-input w-auto" value={financeStart} onChange={e=>setFinanceStart(e.target.value)} />
+                <span className="mx-1">-</span>
+                <input type="date" className="barber-input w-auto" value={financeEnd} onChange={e=>setFinanceEnd(e.target.value)} />
+              </div>
+
+              {/* RESUMO FINANCEIRO */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm opacity-90">Total Faturado</p>
+                      <p className="text-2xl font-bold">R$ {totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <DollarSign className="w-8 h-8 opacity-80" />
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm opacity-90">Serviços Realizados</p>
+                      <p className="text-2xl font-bold">{totalCount}</p>
+                    </div>
+                    <Scissors className="w-8 h-8 opacity-80" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm opacity-90">Ticket Médio</p>
+                      <p className="text-2xl font-bold">
+                        R$ {totalCount > 0 ? (totalValue / totalCount).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '0,00'}
+                      </p>
+                    </div>
+                    <BarChart2 className="w-8 h-8 opacity-80" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm opacity-90">Barbeiros Ativos</p>
+                      <p className="text-2xl font-bold">
+                        {Array.from(new Set(filteredFinance.map(a => a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono'))).length}
+                      </p>
+                    </div>
+                    <Users className="w-8 h-8 opacity-80" />
+                  </div>
+                </div>
+              </div>
+
+              {/* GRÁFICOS */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+                {/* Gráfico de Barras: Valor por Barbeiro */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Faturamento por Barbeiro</h4>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={(() => {
+                      // Agrupa valor por barbeiro
+                      const map = new Map();
+                      filteredFinance.forEach(a => {
+                        const name = a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono';
+                        map.set(name, (map.get(name) || 0) + (a.services?.price || 0));
+                      });
+                      return Array.from(map, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+                    })()}>
+                      <XAxis dataKey="name" fontSize={11} angle={-45} textAnchor="end" height={80} />
+                      <YAxis fontSize={11} tickFormatter={v => `R$ ${v.toLocaleString()}`}/>
+                      <Tooltip 
+                        formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 'Faturamento']}
+                        labelStyle={{ fontWeight: 'bold' }}
+                      />
+                      <Bar dataKey="value" fill="#00657C" radius={[6,6,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Gráfico de Linha: Faturamento Mensal */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Faturamento Mensal</h4>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={(() => {
+                      // Agrupa valor por mês/ano
+                      const map = new Map();
+                      filteredFinance.forEach(a => {
+                        const date = new Date(a.appointment_date);
+                        const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                        map.set(monthYear, (map.get(monthYear) || 0) + (a.services?.price || 0));
+                      });
+                      // Ordena por data e formata labels
+                      return Array.from(map, ([monthYear, value]) => {
+                        const [year, month] = monthYear.split('-');
+                        const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                        return { 
+                          monthYear, 
+                          label: `${monthNames[parseInt(month) - 1]}/${year}`, 
+                          value 
+                        };
+                      }).sort((a, b) => a.monthYear.localeCompare(b.monthYear));
+                    })()}>
+                      <XAxis dataKey="label" fontSize={11} />
+                      <YAxis fontSize={11} tickFormatter={v => `R$ ${v.toLocaleString()}`}/>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <Tooltip 
+                        formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 'Faturamento']}
+                        labelStyle={{ fontWeight: 'bold' }}
+                      />
+                      <Line type="monotone" dataKey="value" stroke="#E63946" strokeWidth={3} dot={{ r: 5, fill: '#E63946' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Gráfico de Pizza: Distribuição por Serviço */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Distribuição de Serviços</h4>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={(() => {
+                          // Agrupa quantidade por serviço
+                          const map = new Map();
+                          filteredFinance.forEach(a => {
+                            const name = a.services?.name || '-';
+                            map.set(name, (map.get(name) || 0) + 1);
+                          });
+                          return Array.from(map, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+                        })()}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#00657C"
+                        label={({ name, percent }) => `${name} (${(percent*100).toFixed(0)}%)`}
+                      >
+                        {(() => {
+                          const colors = ['#00657C', '#E63946', '#22223B', '#F1FAEE', '#A8DADC', '#457B9D', '#1D3557', '#A8DADC'];
+                          const data = (() => {
+                            const map = new Map();
+                            filteredFinance.forEach(a => {
+                              const name = a.services?.name || '-';
+                              map.set(name, (map.get(name) || 0) + 1);
+                            });
+                            return Array.from(map);
+                          })();
+                          return data.map((entry, idx) => <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />);
+                        })()}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value} serviços`, name]} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Gráfico de Barras: Performance por Barbeiro (Quantidade) */}
+                <div className="bg-white rounded-xl shadow p-4">
+                  <h4 className="font-semibold text-sm mb-2">Serviços Realizados por Barbeiro</h4>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={(() => {
+                      // Agrupa quantidade por barbeiro
+                      const map = new Map();
+                      filteredFinance.forEach(a => {
+                        const name = a.barbers?.profiles?.name || a.barbers?.employee_name || 'Dono';
+                        map.set(name, (map.get(name) || 0) + 1);
+                      });
+                      return Array.from(map, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+                    })()}>
+                      <XAxis dataKey="name" fontSize={11} angle={-45} textAnchor="end" height={80} />
+                      <YAxis fontSize={11} />
+                      <Tooltip 
+                        formatter={(value) => [`${value} serviços`, 'Quantidade']}
+                        labelStyle={{ fontWeight: 'bold' }}
+                      />
+                      <Bar dataKey="value" fill="#16A34A" radius={[6,6,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </CardContent>
           </Card>
