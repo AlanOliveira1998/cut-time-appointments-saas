@@ -1,90 +1,75 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* BarberTime Design System - Nova paleta de cores */
+/* BarberTime Design System - Design Moderno e Responsivo */
 
 @layer base {
   :root {
-    --background: 0 0% 96%; /* #F5F7FA */
-    --foreground: 0 0% 12%; /* #1F1F1F */
+    /* Cores principais - Design mais moderno */
+    --background: 0 0% 98%; /* #FAFAFA - Fundo mais claro */
+    --foreground: 220 13% 18%; /* #2D3748 - Texto mais suave */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 220 13% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 220 13% 18%;
 
-    --primary: 200 100% 20%; /* Azul petróleo escuro #004E64 */
+    /* Azul moderno - mais vibrante */
+    --primary: 210 100% 40%; /* #2563EB - Azul mais moderno */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 18%; /* Cinza chumbo #2E2E2E */
-    --secondary-foreground: 0 0% 100%;
+    /* Cinza moderno */
+    --secondary: 220 14% 96%; /* #F7FAFC */
+    --secondary-foreground: 220 13% 18%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 53%; /* #888 */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%; /* #718096 */
 
-    --accent: 80 85% 55%; /* Verde limão suave #A3E635 */
-    --accent-foreground: 0 0% 12%;
+    /* Verde moderno */
+    --accent: 142 76% 36%; /* #16A34A */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 352 70% 51%; /* Vermelho escuro elegante #D72638 */
+    /* Vermelho moderno */
+    --destructive: 0 84% 60%; /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 200 100% 20%;
+    --border: 220 13% 91%; /* #E2E8F0 */
+    --input: 220 13% 91%;
+    --ring: 210 100% 40%;
 
     --radius: 0.75rem;
 
-    /* Auth background gradient */
-    --auth-gradient-start: 220 26% 14%; /* #1e293b */
-    --auth-gradient-end: 215 32% 27%; /* #334155 */
-    
-    /* Glass effect */
-    --glass-bg: 0 0% 100% / 0.1;
-    --glass-border: 0 0% 100% / 0.2;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 12%;
-    --sidebar-primary: 200 100% 20%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 12%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 200 100% 20%;
+    /* Gradientes modernos */
+    --gradient-primary: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    --gradient-secondary: linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 100%);
+    --gradient-accent: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
   }
 
   .dark {
-    --background: 0 0% 9%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 200 100% 25%;
+    --background: 220 13% 18%;
+    --foreground: 220 14% 96%;
+    --card: 220 13% 18%;
+    --card-foreground: 220 14% 96%;
+    --popover: 220 13% 18%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 210 100% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 53%;
-    --accent: 80 85% 55%;
-    --accent-foreground: 0 0% 12%;
-    --destructive: 352 70% 51%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 18%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 200 100% 25%;
-    --sidebar-background: 0 0% 9%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 200 100% 25%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 200 100% 25%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 100% 40%;
   }
 }
 
@@ -95,64 +80,65 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', sans-serif;
-    background-color: #F5F7FA;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold;
-    color: #1F1F1F;
+    @apply font-semibold tracking-tight;
+    color: hsl(var(--foreground));
   }
 }
 
 @layer components {
-  .auth-background {
-    background-image: url('../assets/barber-background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .auth-background::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-  }
-
-  .glass-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  }
-
-
-  .barber-gradient {
-    background: linear-gradient(135deg, #004E64 0%, #003A4A 100%);
-  }
-  
+  /* Cards modernos */
   .barber-card {
-    @apply bg-white rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300;
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300;
+    backdrop-filter: blur(10px);
   }
   
+  /* Botões modernos */
   .barber-button-primary {
-    @apply bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02];
+    @apply bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98];
+    background: var(--gradient-primary);
   }
   
   .barber-button-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02];
+    @apply bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-secondary-foreground px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98];
+    background: var(--gradient-secondary);
   }
 
   .barber-button-success {
-    @apply bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent text-accent-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02];
+    @apply bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent text-accent-foreground px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98];
+    background: var(--gradient-accent);
   }
 
+  /* Inputs modernos */
+  .barber-input {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .barber-input:focus {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Títulos modernos */
+  .barber-title {
+    @apply text-2xl md:text-3xl font-bold text-gray-900 mb-4;
+    background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .barber-subtitle {
+    @apply text-lg md:text-xl font-semibold text-gray-800 mb-3;
+  }
+
+  /* Textos */
   .barber-text-primary {
     color: hsl(var(--foreground));
   }
@@ -161,27 +147,78 @@
     color: hsl(var(--muted-foreground));
   }
 
-  .modern-input {
-    @apply border border-gray-200 bg-gray-50 rounded-lg px-4 py-3 text-slate-800 placeholder:text-slate-500 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+  /* Badges modernos */
+  .barber-badge {
+    @apply px-3 py-1 rounded-full text-sm font-medium transition-all duration-200;
   }
 
+  /* Header moderno */
+  .barber-header {
+    @apply bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  /* Container responsivo */
+  .barber-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Grid responsivo */
+  .barber-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  /* Animações suaves */
   .animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out forwards;
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
   .animate-fade-in-up-delay {
-    animation: fadeInUp 0.6s ease-out 0.2s forwards;
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     opacity: 0;
   }
 
   @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Responsividade mobile-first */
+  @media (max-width: 768px) {
+    .barber-card {
+      @apply rounded-xl mx-4;
+    }
+    
+    .barber-button-primary,
+    .barber-button-secondary,
+    .barber-button-success {
+      @apply px-4 py-3 text-sm;
+    }
+    
+    .barber-title {
+      @apply text-xl;
+    }
+    
+    .barber-subtitle {
+      @apply text-lg;
+    }
+  }
+
+  /* Melhorias para telas pequenas */
+  @media (max-width: 640px) {
+    .barber-container {
+      @apply px-3;
+    }
+    
+    .barber-grid {
+      grid-template-columns: 1fr;
     }
   }
 }
