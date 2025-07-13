@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Crown } from 'lucide-react';
 
@@ -20,7 +19,7 @@ export const TrialExpiredModal: React.FC<TrialExpiredModalProps> = ({ isOpen, on
         <DialogHeader>
           <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4">
             <img 
-              src="/lovable-uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
+              src="/lovable-Uploads/c508ab5e-7c1d-421f-b905-6c8b27ab36fe.png" 
               alt="BarberTime Logo" 
               className="w-full h-full object-contain"
             />
@@ -28,6 +27,9 @@ export const TrialExpiredModal: React.FC<TrialExpiredModalProps> = ({ isOpen, on
           <DialogTitle className="text-center text-xl font-semibold barber-text-primary">
             Período gratuito expirado
           </DialogTitle>
+          <DialogDescription className="text-center barber-text-secondary">
+            Seu período gratuito de 7 dias expirou. Ative seu plano para continuar usando o BarberTime.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="text-center space-y-4">
