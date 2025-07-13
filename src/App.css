@@ -40,3 +40,37 @@
 .read-the-docs {
   color: #888;
 }
+
+/* BarberTime Modern Design */
+
+.barber-button-primary {
+  @apply bg-gradient-to-r from-bt-primary to-bt-secondary text-white rounded-full font-semibold shadow-md px-6 py-3 transition hover:from-bt-secondary hover:to-bt-primary hover:shadow-lg;
+}
+
+.barber-card {
+  @apply bg-white rounded-2xl shadow-lg p-8 border border-bt-gray mb-6;
+}
+
+.barber-input {
+  @apply w-full px-4 py-3 rounded-lg border-2 border-bt-gray focus:border-bt-primary focus:ring-2 focus:ring-bt-secondary text-bt-black bg-bt-gray-light transition;
+}
+
+.barber-title {
+  @apply text-3xl font-bold text-bt-primary mb-2;
+}
+
+.barber-subtitle {
+  @apply text-lg font-semibold text-bt-secondary mb-4;
+}
+
+.barber-badge {
+  @apply rounded-full px-3 py-1 text-xs font-bold bg-bt-gray text-bt-primary;
+}
+
+.barber-modal {
+  @apply bg-white rounded-3xl shadow-2xl p-10 border-2 border-bt-primary;
+}
+
+body {
+  @apply bg-bt-gray-light font-sans text-bt-black;
+}
