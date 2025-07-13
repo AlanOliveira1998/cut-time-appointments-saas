@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, User } from 'lucide-react';
+import { Plus, Edit, Trash2, User, ExternalLink, Copy } from 'lucide-react';
 
 interface Barber {
   id: string;
@@ -275,6 +275,35 @@ export const BarbersList: React.FC = () => {
     setIsDialogOpen(true);
   };
 
+  const getBarberBookingUrl = (barber: Barber) => {
+    const barberName = barber.profiles?.name || barber.employee_name || '';
+    if (!barberName) return `${window.location.origin}/booking`;
+    
+    const barberSlug = barberName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .trim();
+    
+    return `${window.location.origin}/booking/${barberSlug}`;
+  };
+
+  const copyBarberLink = (barber: Barber) => {
+    const url = getBarberBookingUrl(barber);
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copiado!",
+      description: "Link do barbeiro copiado para a área de transferência",
+    });
+  };
+
+  const openBarberLink = (barber: Barber) => {
+    const url = getBarberBookingUrl(barber);
+    window.open(url, '_blank');
+  };
+
   // Debug: Verificar estado atual
   console.log('🔍 Estado atual:', {
     barbersCount: barbers.length,
@@ -445,6 +474,22 @@ export const BarbersList: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex justify-end space-x-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyBarberLink(barber)}
+                    title="Copiar link do barbeiro"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openBarberLink(barber)}
+                    title="Abrir página do barbeiro"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
