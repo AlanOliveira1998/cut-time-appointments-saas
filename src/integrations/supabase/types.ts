@@ -124,6 +124,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          barbershop_logo: string | null
           created_at: string | null
           id: string
           name: string
@@ -131,6 +132,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          barbershop_logo?: string | null
           created_at?: string | null
           id: string
           name: string
@@ -138,6 +140,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          barbershop_logo?: string | null
           created_at?: string | null
           id?: string
           name?: string
