@@ -187,6 +187,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         </button>
       </form>
 
+      {/* Separador */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">ou</span>
+        </div>
+      </div>
+
+      {/* Remover bloco do botão Google */}
+
       <div className="mt-6 text-center">
         <div className="border-t border-gray-200 pt-4">
           <span className="text-slate-600">Já tem uma conta? </span>
