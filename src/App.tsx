@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Auth from "./pages/Auth";
+import { AuthCallback } from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
@@ -43,6 +44,10 @@ const AppRoutes: React.FC = () => {
             <Auth />
           </PublicRoute>
         } 
+      />
+      <Route 
+        path="/auth/callback" 
+        element={<AuthCallback />} 
       />
       <Route 
         path="/dashboard" 
