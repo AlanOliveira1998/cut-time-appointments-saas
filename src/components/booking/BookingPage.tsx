@@ -60,6 +60,17 @@ export const BookingPage: React.FC = () => {
     }
     
     try {
+      // Debug: Verificar o que está sendo usado
+      console.log('=== DEBUG AGENDAMENTO ===');
+      console.log('Barber object:', barber);
+      console.log('Barber ID:', barber.id);
+      console.log('Selected Service:', selectedService);
+      console.log('Selected Date:', selectedDate);
+      console.log('Selected Time:', selectedTime);
+      console.log('Client Name:', clientName);
+      console.log('Client Phone:', clientPhone);
+      console.log('========================');
+      
       console.log('Criando agendamento:', {
         barber_id: barber.id,
         service_id: selectedService.id,
