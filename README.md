@@ -1,73 +1,212 @@
-# Welcome to your Lovable project
+# 🪒 BarberTime - Sistema de Agendamento para Barbearias
 
-## Project info
+Um sistema SaaS completo para gerenciamento de agendamentos em barbearias, construído com React, TypeScript e Supabase.
 
-**URL**: https://lovable.dev/projects/de3923ab-9a3c-4628-ba67-02ea5c8c6b9e
+## ✨ Funcionalidades
 
-## How can I edit this code?
+### 🎯 Para Clientes
+- **Agendamento Online**: Interface intuitiva para agendar horários
+- **Seleção de Barbeiros**: Escolha entre diferentes profissionais
+- **Serviços Personalizados**: Visualize preços e durações
+- **Confirmação por Email**: Receba confirmações automáticas
+- **Histórico de Agendamentos**: Acompanhe seus agendamentos
 
-There are several ways of editing your application.
+### 🏪 Para Barbeiros
+- **Dashboard Completo**: Gerenciamento centralizado
+- **Gestão de Serviços**: Adicione e edite serviços
+- **Horários de Trabalho**: Configure disponibilidade
+- **Lista de Agendamentos**: Visualize agenda diária
+- **Gestão de Funcionários**: Adicione barbeiros à equipe
 
-**Use Lovable**
+### 🔧 Recursos Técnicos
+- **Autenticação Segura**: Supabase Auth com RLS
+- **Interface Responsiva**: Funciona em desktop e mobile
+- **Validação Robusta**: Formulários com validação em tempo real
+- **Performance Otimizada**: Lazy loading e memoização
+- **Acessibilidade**: Suporte a leitores de tela
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/de3923ab-9a3c-4628-ba67-02ea5c8c6b9e) and start prompting.
+## 🚀 Tecnologias
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI**: Tailwind CSS + shadcn/ui + Radix UI
+- **Backend**: Supabase (PostgreSQL + Auth + RLS)
+- **Formulários**: React Hook Form + Zod
+- **Roteamento**: React Router DOM
+- **Estado**: React Query + Context API
+- **Deploy**: Vercel/Netlify (compatível)
 
-**Use your preferred IDE**
+## 📦 Instalação
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Pré-requisitos
+- Node.js 18+ 
+- npm 8+ ou yarn
+- Conta no Supabase
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 1. Clone o repositório
+```bash
+git clone https://github.com/seu-usuario/barbertime-appointments-saas.git
+cd barbertime-appointments-saas
+```
 
-Follow these steps:
+### 2. Instale as dependências
+```bash
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 3. Configure as variáveis de ambiente
+Crie um arquivo `.env.local` na raiz do projeto:
+```env
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 4. Configure o Supabase
+1. Crie um projeto no [Supabase](https://supabase.com)
+2. Execute as migrations na pasta `supabase/migrations/`
+3. Configure as políticas RLS conforme necessário
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 5. Execute o projeto
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O projeto estará disponível em `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🗂️ Estrutura do Projeto
 
-**Use GitHub Codespaces**
+```
+src/
+├── components/          # Componentes React
+│   ├── auth/           # Componentes de autenticação
+│   ├── booking/        # Componentes de agendamento
+│   ├── dashboard/      # Componentes do dashboard
+│   └── ui/             # Componentes de UI reutilizáveis
+├── contexts/           # Contextos React (Auth, etc.)
+├── hooks/              # Hooks customizados
+├── integrations/       # Integrações externas (Supabase)
+├── lib/                # Utilitários e configurações
+├── pages/              # Páginas da aplicação
+├── types/              # Definições de tipos TypeScript
+└── utils/              # Funções utilitárias
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🔧 Scripts Disponíveis
 
-## What technologies are used for this project?
+```bash
+# Desenvolvimento
+npm run dev              # Inicia servidor de desenvolvimento
+npm run build            # Build para produção
+npm run preview          # Preview do build
 
-This project is built with:
+# Qualidade de Código
+npm run lint             # Executa ESLint
+npm run lint:fix         # Corrige problemas do ESLint
+npm run format           # Formata código com Prettier
+npm run type-check       # Verifica tipos TypeScript
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Testes
+npm run test             # Executa testes
+npm run test:ui          # Interface visual para testes
+npm run test:coverage    # Relatório de cobertura
 
-## How can I deploy this project?
+# Utilitários
+npm run list-structure   # Lista estrutura do projeto
+```
 
-Simply open [Lovable](https://lovable.dev/projects/de3923ab-9a3c-4628-ba67-02ea5c8c6b9e) and click on Share -> Publish.
+## 🛠️ Configuração do Supabase
 
-## Can I connect a custom domain to my Lovable project?
+### 1. Tabelas Principais
+- `profiles`: Perfis de usuários
+- `barbers`: Barbeiros e funcionários
+- `services`: Serviços oferecidos
+- `working_hours`: Horários de funcionamento
+- `appointments`: Agendamentos
 
-Yes, you can!
+### 2. Políticas RLS
+O projeto inclui políticas de segurança configuradas:
+- Usuários autenticados podem gerenciar seus próprios dados
+- Agendamentos públicos podem ser criados por qualquer pessoa
+- Barbeiros podem gerenciar seus serviços e horários
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 3. Funções de Banco
+- `handle_new_user()`: Cria perfil automaticamente
+- `is_barber_owner()`: Verifica se usuário é owner
+- `can_create_barber()`: Valida criação de barbeiros
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 🎨 Personalização
+
+### Cores e Tema
+As cores podem ser personalizadas no arquivo `src/index.css`:
+```css
+:root {
+  --primary: 200 100% 20%; /* Azul petróleo */
+  --accent: 80 85% 55%;    /* Verde limão */
+  /* ... outras variáveis */
+}
+```
+
+### Componentes
+Os componentes usam shadcn/ui e podem ser personalizados:
+```bash
+npx shadcn@latest add [component-name]
+```
+
+## 📱 Responsividade
+
+O projeto é totalmente responsivo e funciona em:
+- 📱 Mobile (320px+)
+- 📱 Tablet (768px+)
+- 💻 Desktop (1024px+)
+- 🖥️ Large Desktop (1440px+)
+
+## 🔒 Segurança
+
+- **Autenticação**: Supabase Auth com JWT
+- **Autorização**: Row Level Security (RLS)
+- **Validação**: Zod schemas em todos os formulários
+- **Sanitização**: Input sanitization
+- **Rate Limiting**: Proteção contra spam
+
+## 🚀 Deploy
+
+### Vercel (Recomendado)
+1. Conecte seu repositório ao Vercel
+2. Configure as variáveis de ambiente
+3. Deploy automático a cada push
+
+### Netlify
+1. Conecte seu repositório ao Netlify
+2. Configure build command: `npm run build`
+3. Configure publish directory: `dist`
+
+### Outros
+O projeto é compatível com qualquer plataforma que suporte aplicações React estáticas.
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+- 📧 Email: suporte@barbertime.com
+- 💬 Discord: [BarberTime Community](https://discord.gg/barbertime)
+- 📖 Documentação: [docs.barbertime.com](https://docs.barbertime.com)
+
+## 🙏 Agradecimentos
+
+- [Supabase](https://supabase.com) pela infraestrutura
+- [shadcn/ui](https://ui.shadcn.com) pelos componentes
+- [Vercel](https://vercel.com) pela hospedagem
+- Comunidade React/TypeScript
+
+---
+
+**BarberTime** - Transformando a gestão de barbearias 🪒✨
