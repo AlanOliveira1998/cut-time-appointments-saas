@@ -125,8 +125,12 @@ const Dashboard: React.FC = () => {
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00657C] to-[#004A5A] rounded-lg flex items-center justify-center">
-              <Scissors className="w-6 h-6 text-white" />
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img
+                src="/logo.jpg"
+                alt="BarberTime Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold">BarberTime</h1>
