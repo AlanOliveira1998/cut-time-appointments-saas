@@ -130,6 +130,12 @@ export type Database = {
           name: string
           phone: string | null
           updated_at: string | null
+          subscription_status: string | null
+          subscription_start_date: string | null
+          subscription_end_date: string | null
+          kiwify_customer_id: string | null
+          kiwify_subscription_id: string | null
+          last_payment_date: string | null
         }
         Insert: {
           barbershop_logo?: string | null
@@ -138,6 +144,12 @@ export type Database = {
           name: string
           phone?: string | null
           updated_at?: string | null
+          subscription_status?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
+          kiwify_customer_id?: string | null
+          kiwify_subscription_id?: string | null
+          last_payment_date?: string | null
         }
         Update: {
           barbershop_logo?: string | null
@@ -146,6 +158,12 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string | null
+          subscription_status?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
+          kiwify_customer_id?: string | null
+          kiwify_subscription_id?: string | null
+          last_payment_date?: string | null
         }
         Relationships: []
       }
