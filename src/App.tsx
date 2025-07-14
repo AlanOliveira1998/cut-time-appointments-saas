@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from './pages/AdminDashboard';
 
 // const queryClient = new QueryClient();
 
@@ -64,6 +65,14 @@ const AppRoutes: React.FC = () => {
       <Route 
         path="/booking" 
         element={<Booking />} 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } 
       />
       <Route 
         path="/" 
