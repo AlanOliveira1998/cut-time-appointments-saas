@@ -5,11 +5,12 @@ import UsersAdminList from '../components/admin/UsersAdminList';
 import { useAuth } from '../contexts/AuthContext';
 
 const ADMIN_EMAIL = 'alan.pires.oliveira@gmail.com'; // ajuste para o e-mail do dono
+const ADMIN_ID = '5446e96c-49ac-4a7f-86eb-5107ee94ef82'; // UID do admin
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
 
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user || (user.email !== ADMIN_EMAIL && user.id !== ADMIN_ID)) {
     return <div className="text-center mt-20 text-red-600 font-bold">Acesso restrito ao administrador.</div>;
   }
 
