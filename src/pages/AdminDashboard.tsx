@@ -16,6 +16,9 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
+      <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded text-center font-semibold text-lg shadow">
+        Logado como administrador
+      </div>
       <h1 className="text-3xl font-bold mb-8 text-center">Painel Administrativo</h1>
       <div className="space-y-10">
         <BarbershopsAdminList />
