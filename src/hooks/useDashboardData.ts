@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 
-// Define types locally since we can't import from @/types
-interface AppointmentBase {
+// Basic type definitions
+interface Appointment {
   id: string;
   status: string;
   service_id: string;
@@ -13,50 +13,54 @@ interface AppointmentBase {
   appointment_date: string;
   appointment_time: string;
   created_at: string;
-  updated_at?: string;
-  service_name?: string;
-  service_duration?: number;
-  service_price?: number;
-  notes?: string;
 }
 
 interface Profile {
   id: string;
   name: string;
-  phone: string;
   email?: string;
-  created_at: string;
-  updated_at: string;
-  barbershop_logo?: string;
-  subscription_status: string;
+  phone: string;
+  subscription_status?: string;
   subscription_start_date?: string;
   subscription_end_date?: string;
   kiwify_customer_id?: string;
   kiwify_subscription_id?: string;
   last_payment_date?: string;
+  barbershop_logo?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface DashboardStats {
+// Separate stats into numbers and full stats
+interface StatsNumbers {
   totalAppointments: number;
   pendingAppointments: number;
   completedAppointments: number;
   totalRevenue: number;
   averageServiceTime: string;
+}
+
+interface StatsWithAppointments extends StatsNumbers {
   recentAppointments: Appointment[];
 }
+
+// Initial state values
+const INIT_STATS: StatsNumbers = {
+  totalAppointments: 0,
+  pendingAppointments: 0,
+  completedAppointments: 0,
+  totalRevenue: 0,
+  averageServiceTime: '0 min'
+};
 
 export const useDashboardData = () => {
   const { user } = useAuth();
   console.log('[useDashboardData] Initializing with user:', user?.id || 'no user');
   
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalAppointments: 0,
-    pendingAppointments: 0,
-    completedAppointments: 0,
-    totalRevenue: 0,
-    averageServiceTime: '0 min',
-    recentAppointments: [],
+  const [stats, setStats] = useState<StatsWithAppointments>({
+    ...INIT_STATS,
+    recentAppointments: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
