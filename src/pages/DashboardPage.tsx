@@ -7,22 +7,21 @@ import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { DashboardAppointments } from '@/components/dashboard/DashboardAppointments';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus } from 'lucide-react';
+import { Loader2, Calendar, Plus } from 'lucide-react';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user, isTrialExpired } = useAuth();
+  const { user, isTrialExpired, loading: authLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // Usando o hook personalizado para gerenciar os dados do dashboard
+  // Using the custom hook to manage dashboard data
   const {
     profile,
     stats,
-    appointments,
-    loading,
+    loading: dataLoading,
     error,
-    refreshData,
-    daysRemaining
+    daysRemaining,
+    refreshData
   } = useDashboardData();
 
   // Fechar o menu móvel quando a rota mudar
@@ -50,6 +49,51 @@ export const DashboardPage = () => {
     setMobileMenuOpen(false);
   }, []);
 
+  // Mostrar loading enquanto autenticação está sendo verificada
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar loading enquanto os dados estão sendo carregados
+  if (dataLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando dados do dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's an error loading the data
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <div className="max-w-md space-y-4 text-center">
+          <h2 className="text-xl font-semibold">Erro ao carregar o dashboard</h2>
+          <p className="text-muted-foreground">{error || 'Ocorreu um erro inesperado'}</p>
+          <Button onClick={refreshData} variant="outline">
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não houver usuário autenticado, redirecionar para login
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
   // Se o trial tiver expirado, mostrar mensagem
   if (isTrialExpired) {
     return (
@@ -63,12 +107,6 @@ export const DashboardPage = () => {
         </div>
       </div>
     );
-  }
-
-  // Se não houver usuário autenticado, redirecionar para login
-  if (!user) {
-    navigate('/auth');
-    return null;
   }
 
   return (
@@ -113,13 +151,13 @@ export const DashboardPage = () => {
                 totalRevenue: stats?.totalRevenue || 0,
                 averageServiceTime: stats?.averageServiceTime || '0 min',
               }} 
-              loading={loading}
+              loading={dataLoading}
             />
             
-            {/* Próximos agendamentos */}
+            {/* Recent appointments */}
             <DashboardAppointments 
-              appointments={appointments}
-              loading={loading}
+              appointments={stats?.recentAppointments || []}
+              loading={dataLoading}
               onViewAppointment={handleViewAppointment}
             />
           </div>
