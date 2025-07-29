@@ -110,21 +110,26 @@ export const useDashboardData = () => {
       // First get the barbers
       let barbersList: { id: string }[] = [];
       
-      // Get barbers for the current user's barbershop
-      const { data: barbers, error: barbersError } = await supabase
+      // First ensure we have a profile
+      if (!profile) {
+        throw new Error('Perfil do usuário não encontrado. Por favor, atualize seu perfil primeiro.');
+      }
+      
+      // Check if a barber with this profile already exists
+      const { data: existingBarber, error: barberCheckError } = await supabase
         .from('barbers')
         .select('id')
-        .eq('barbershop_id', user.id);
+        .eq('profile_id', profile.id)
+        .maybeSingle();
         
-      if (barbersError) throw barbersError;
+      if (barberCheckError) {
+        console.error('[useDashboardData] Error checking for existing barber:', barberCheckError);
+        throw barberCheckError;
+      }
       
-      if (!barbers || barbers.length === 0) {
-        console.log('[useDashboardData] No barbers found, creating default barber');
-        // Create a default barber for this user
-        // First ensure we have a profile
-        if (!profile) {
-          throw new Error('Perfil do usuário não encontrado. Por favor, atualize seu perfil primeiro.');
-        }
+      // If no barber exists for this profile, create one
+      if (!existingBarber) {
+        console.log('[useDashboardData] No barber found for profile, creating default barber');
         
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
@@ -145,11 +150,26 @@ export const useDashboardData = () => {
         
         // Use the newly created barber
         barbersList = [newBarber];
-      } else {
-        barbersList = barbers;
+      } else if (existingBarber) {
+        // Use the existing barber
+        barbersList = [existingBarber];
       }
       
-      const barberIds = barbers.map(b => b.id);
+      // If no barbers found, return early with empty stats
+      if (barbersList.length === 0) {
+        console.log('[useDashboardData] No barbers found, returning empty stats');
+        setStats({
+          totalAppointments: 0,
+          pendingAppointments: 0,
+          completedAppointments: 0,
+          totalRevenue: 0,
+          averageServiceTime: '0 min',
+          recentAppointments: []
+        });
+        return;
+      }
+      
+      const barberIds = barbersList.map(b => b.id);
       
       // Get appointments for these barbers
       const { data: appointmentsData, error: appointmentsError } = await supabase
