@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Auth from "./pages/Auth";
 import { AuthCallback } from "./pages/AuthCallback";
-import Dashboard from "./pages/Dashboard";
+import { DashboardPage } from "./pages/DashboardPage";
 import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
@@ -54,7 +54,7 @@ const AppRoutes: React.FC = () => {
         path="/dashboard" 
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <DashboardPage />
           </ProtectedRoute>
         } 
       />
