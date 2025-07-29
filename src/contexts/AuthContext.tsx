@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       });
-
+  
       if (error) {
         console.error('Register error:', error);
         toast({
@@ -145,20 +145,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
-
+  
+      // O perfil será criado automaticamente pelo trigger no banco de dados
+      // Então não precisamos fazer nada aqui
+  
       if (data.user) {
-        // Verificar se o usuário precisa confirmar email
-        if (data.user.email_confirmed_at) {
-          toast({
-            title: "Conta criada com sucesso!",
-            description: "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora.",
-          });
-        } else {
-          toast({
-            title: "Conta criada!",
-            description: "Verifique seu email para confirmar a conta.",
-          });
-        }
+        toast({
+          title: "Conta criada com sucesso!",
+          description: data.user.email_confirmed_at 
+            ? "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora."
+            : "Verifique seu email para confirmar a conta.",
+        });
         return true;
       }
       
