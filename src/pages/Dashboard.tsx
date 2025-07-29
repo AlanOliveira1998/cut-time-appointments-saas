@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { TrialExpiredModal } from '../components/TrialExpiredModal';
@@ -8,62 +7,25 @@ import { BarbersList } from '../components/dashboard/BarbersList';
 import { AppointmentsList } from '../components/dashboard/AppointmentsList';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Scissors, Calendar, Settings, Clock, ExternalLink, User, LogOut, Crown, Users, Menu, X, Home, DollarSign, BarChart2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { supabase } from '../integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
-import { simulateSubscriptionActivation } from '../lib/kiwify-webhook';
+import { useAuth } from '@/contexts/AuthContext';
+import { DashboardPage } from './DashboardPage';
+import { Button } from '@/components/ui/button';
 
-const Dashboard: React.FC = () => {
-  const { user, logout, isTrialExpired, loading } = useAuth();
-  const [showTrialModal, setShowTrialModal] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState(0);
-  const [profile, setProfile] = useState<any>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [tab, setTab] = useState('home'); // Começa na Home
-  const [selectedBarberFinance, setSelectedBarberFinance] = useState<'all' | string>('all');
-  const [financeAppointments, setFinanceAppointments] = useState<any[]>([]);
-  const [financeLoading, setFinanceLoading] = useState(false);
-  const [financeStatus, setFinanceStatus] = useState<'all'|'scheduled'|'completed'|'cancelled'>('all');
-  const [financeStart, setFinanceStart] = useState('');
-  const [financeEnd, setFinanceEnd] = useState('');
-  const [barbershopLogo, setBarbershopLogo] = useState<string | null>(null);
-
+/**
+ * @deprecated Use DashboardPage component instead
+ * This component is kept for backward compatibility and will be removed in a future version.
+ * All functionality has been moved to the new DashboardPage component.
+ */
+const Dashboard = () => {
+  const { user, logout, isTrialExpired, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      loadProfile();
-      calculateTrialDays();
-      loadBarbershopLogo();
-      
-      // Verificar se o trial expirou (agora assíncrono)
-      const checkTrialStatus = async () => {
-        const expired = await isTrialExpired();
-        if (expired) {
-          console.log('Trial expirado - exibindo modal');
-          setShowTrialModal(true);
-        }
-      };
-      
-      checkTrialStatus();
-    }
-  }, [user, isTrialExpired]);
-
-  // Verificação adicional para garantir que o modal seja exibido
-  useEffect(() => {
-    if (user && !loading) {
-      const checkTrialStatus = async () => {
-        const trialExpired = await isTrialExpired();
-        if (trialExpired && !showTrialModal) {
-          console.log('Trial expirado detectado - exibindo modal');
-          setShowTrialModal(true);
-        }
-      };
-      
+    if (!authLoading) {
+      // If user is not authenticated, redirect to login
+      if (!user) {
+        navigate('/auth');
       checkTrialStatus();
     }
   }, [user, loading, isTrialExpired, showTrialModal]);
