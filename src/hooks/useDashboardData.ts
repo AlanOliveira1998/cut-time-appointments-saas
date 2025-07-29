@@ -117,13 +117,19 @@ export const useDashboardData = () => {
       if (!barbers || barbers.length === 0) {
         console.log('[useDashboardData] No barbers found, creating default barber');
         // Create a default barber for this user
+        // First ensure we have a profile
+        if (!profile) {
+          throw new Error('Perfil do usuário não encontrado. Por favor, atualize seu perfil primeiro.');
+        }
+        
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
-            barber_name: profile?.name || 'Barbeiro Principal',
-            barbershop_id: user.id,
+            profile_id: profile.id,  // Reference the user's profile
             is_active: true,
-            created_at: new Date().toISOString()
+            specialty: 'Corte de Cabelo',
+            experience_years: 1
+            // created_at and updated_at are automatically set by the database
           }])
           .select('id')
           .single();
