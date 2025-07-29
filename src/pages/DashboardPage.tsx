@@ -10,8 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, Plus } from 'lucide-react';
 
 export const DashboardPage = () => {
+  console.log('[DashboardPage] Rendering DashboardPage');
   const navigate = useNavigate();
   const { user, isTrialExpired, loading: authLoading } = useAuth();
+  console.log('[DashboardPage] Auth state:', { 
+    hasUser: !!user, 
+    userId: user?.id,
+    authLoading 
+  });
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Using the custom hook to manage dashboard data
@@ -51,11 +58,12 @@ export const DashboardPage = () => {
 
   // Mostrar loading enquanto autenticação está sendo verificada
   if (authLoading) {
+    console.log('[DashboardPage] Showing auth loading state');
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Carregando...</p>
+          <p className="text-muted-foreground">Verificando autenticação...</p>
         </div>
       </div>
     );
@@ -90,8 +98,17 @@ export const DashboardPage = () => {
 
   // Se não houver usuário autenticado, redirecionar para login
   if (!user) {
-    navigate('/auth');
-    return null;
+    console.log('[DashboardPage] No authenticated user, redirecting to login');
+    // Usar setTimeout para evitar erros de atualização de estado durante a renderização
+    setTimeout(() => navigate('/auth'), 0);
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Redirecionando para login...</p>
+        </div>
+      </div>
+    );
   }
 
   // Se o trial tiver expirado, mostrar mensagem
