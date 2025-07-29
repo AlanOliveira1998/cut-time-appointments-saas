@@ -26,9 +26,11 @@ const Dashboard = () => {
       // If user is not authenticated, redirect to login
       if (!user) {
         navigate('/auth');
-      checkTrialStatus();
+      } else {
+        checkTrialStatus();
+      }
     }
-  }, [user, loading, isTrialExpired, showTrialModal]);
+  }, [user, authLoading, isTrialExpired, showTrialModal]);
 
   // Carregar logo da barbearia
   const loadBarbershopLogo = async () => {
