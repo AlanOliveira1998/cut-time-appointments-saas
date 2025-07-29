@@ -30,23 +30,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    console.log('[AuthContext] Initializing auth...');
 
     const initializeAuth = async () => {
       try {
-        // Primeiro, pegar a sessão atual
+        console.log('[AuthContext] Getting current session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('[AuthContext] Error getting session:', error);
+        } else {
+          console.log('[AuthContext] Current session:', session ? 'Found' : 'None');
         }
         
         if (mounted) {
+          console.log('[AuthContext] Setting session and user state', { 
+            hasSession: !!session,
+            hasUser: !!session?.user 
+          });
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('[AuthContext] Auth initialization error:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -54,16 +61,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Configurar listener para mudanças de estado
+    console.log('[AuthContext] Setting up auth state change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('[AuthContext] Auth state changed:', { 
+          event, 
+          sessionId: session?.user?.id,
+          hasUser: !!session?.user
+        });
         
         if (mounted) {
+          console.log('[AuthContext] Updating auth state', { 
+            hasSession: !!session,
+            hasUser: !!session?.user 
+          });
           setSession(session);
           setUser(session?.user ?? null);
           
           // Só definir loading como false após a inicialização completa
           if (loading) {
+            console.log('[AuthContext] Initial loading complete');
             setLoading(false);
           }
         }
@@ -81,10 +98,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('[AuthContext] Logging in with email:', email);
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+      });
+      
+      console.log('[AuthContext] Login response:', { 
+        hasUser: !!data?.user,
+        error: error?.message 
       });
 
       if (error) {
