@@ -120,9 +120,10 @@ export const useDashboardData = () => {
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
-            name: profile?.name || 'Barbeiro Principal',
+            barber_name: profile?.name || 'Barbeiro Principal',
             barbershop_id: user.id,
-            is_active: true
+            is_active: true,
+            created_at: new Date().toISOString()
           }])
           .select('id')
           .single();
