@@ -3,25 +3,37 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 
 // Define types locally since we can't import from @/types
-interface Appointment {
+interface AppointmentBase {
   id: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: string;
   service_id: string;
   barber_id: string;
   client_name: string;
   client_phone: string;
-  date: string;
+  appointment_date: string;
+  appointment_time: string;
   created_at: string;
+  updated_at?: string;
+  service_name?: string;
+  service_duration?: number;
+  service_price?: number;
+  notes?: string;
 }
 
 interface Profile {
   id: string;
   name: string;
-  email: string;
   phone: string;
+  email?: string;
   created_at: string;
-  subscription_status?: string;
-  subscription_end_date?: string | null;
+  updated_at: string;
+  barbershop_logo?: string;
+  subscription_status: string;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
+  kiwify_customer_id?: string;
+  kiwify_subscription_id?: string;
+  last_payment_date?: string;
 }
 
 export interface DashboardStats {
@@ -91,6 +103,9 @@ export const useDashboardData = () => {
     try {
       console.log('[useDashboardData] Loading dashboard stats for user:', user.id);
       
+      // First get the barbers
+      let barbersList: { id: string }[] = [];
+      
       // Get barbers for the current user's barbershop
       const { data: barbers, error: barbersError } = await supabase
         .from('barbers')
@@ -100,8 +115,27 @@ export const useDashboardData = () => {
       if (barbersError) throw barbersError;
       
       if (!barbers || barbers.length === 0) {
-        console.log('[useDashboardData] No barbers found for this user');
-        return;
+        console.log('[useDashboardData] No barbers found, creating default barber');
+        // Create a default barber for this user
+        const { data: newBarber, error: createBarberError } = await supabase
+          .from('barbers')
+          .insert([{
+            name: profile?.name || 'Barbeiro Principal',
+            barbershop_id: user.id,
+            is_active: true
+          }])
+          .select('id')
+          .single();
+          
+        if (createBarberError || !newBarber) {
+          console.error('[useDashboardData] Error creating default barber:', createBarberError);
+          throw new Error('Não foi possível configurar sua barbearia. Por favor, tente novamente.');
+        }
+        
+        // Use the newly created barber
+        barbersList = [newBarber];
+      } else {
+        barbersList = barbers;
       }
       
       const barberIds = barbers.map(b => b.id);
@@ -173,10 +207,14 @@ export const useDashboardData = () => {
     setError('');
     
     try {
-      await Promise.all([loadProfile(), loadDashboardStats()]);
-    } catch (err) {
+      // First load the profile
+      await loadProfile();
+      
+      // Then load dashboard stats which depends on the profile
+      await loadDashboardStats();
+    } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
-      setError('Failed to load dashboard data');
+      setError(err.message || 'Falha ao carregar os dados do painel');
     } finally {
       setLoading(false);
     }
