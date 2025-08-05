@@ -102,6 +102,19 @@ export const ProfileDebug: React.FC = () => {
     }
   };
 
+  const forceRefresh = async () => {
+    setLoading(true);
+    setResult('Forçando refresh dos dados...');
+
+    try {
+      // Forçar recarregamento da página
+      window.location.reload();
+    } catch (error: any) {
+      setResult(`Erro ao forçar refresh: ${error.message}`);
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -130,6 +143,15 @@ export const ProfileDebug: React.FC = () => {
             className="w-full"
           >
             {loading ? 'Testando...' : 'Testar Políticas RLS'}
+          </Button>
+          
+          <Button 
+            onClick={forceRefresh} 
+            disabled={loading}
+            variant="outline"
+            className="w-full"
+          >
+            {loading ? 'Recarregando...' : 'Forçar Refresh'}
           </Button>
         </div>
         
