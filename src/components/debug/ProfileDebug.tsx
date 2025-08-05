@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 export const ProfileDebug: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
 
@@ -111,6 +111,7 @@ export const ProfileDebug: React.FC = () => {
         <div>
           <p><strong>Usuário ID:</strong> {user?.id || 'Nenhum'}</p>
           <p><strong>Email:</strong> {user?.email || 'Nenhum'}</p>
+          <p><strong>Auth Loading:</strong> {authLoading ? 'Sim' : 'Não'}</p>
         </div>
         
         <div className="space-y-2">
