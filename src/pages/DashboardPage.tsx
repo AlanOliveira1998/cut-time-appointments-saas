@@ -102,6 +102,17 @@ export const DashboardPage = () => {
           <div className="mt-8">
             <ProfileDebug />
           </div>
+          
+          {/* Test button to force refresh */}
+          <div className="mt-4">
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="w-full"
+            >
+              Recarregar Página
+            </Button>
+          </div>
         </div>
       </div>
     );
