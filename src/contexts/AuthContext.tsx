@@ -185,7 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .insert({
             id: user.id,
             name: user.user_metadata?.name || user.user_metadata?.full_name || 'Novo Usuário',
-            email: user.email || '',
             phone: user.user_metadata?.phone || '',
             subscription_status: 'trial',
             subscription_start_date: new Date().toISOString(),
