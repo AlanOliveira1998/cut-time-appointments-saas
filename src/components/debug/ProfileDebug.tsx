@@ -115,6 +115,28 @@ export const ProfileDebug: React.FC = () => {
     }
   };
 
+  const testConnectivity = async () => {
+    setLoading(true);
+    setResult('Testando conectividade com Supabase...');
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+
+      if (error) {
+        setResult(`Erro de conectividade: ${error.message}`);
+      } else {
+        setResult('Conectividade com Supabase OK!');
+      }
+    } catch (error: any) {
+      setResult(`Erro de conectividade: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -143,6 +165,15 @@ export const ProfileDebug: React.FC = () => {
             className="w-full"
           >
             {loading ? 'Testando...' : 'Testar Políticas RLS'}
+          </Button>
+          
+          <Button 
+            onClick={testConnectivity} 
+            disabled={loading}
+            variant="outline"
+            className="w-full"
+          >
+            {loading ? 'Testando...' : 'Testar Conectividade'}
           </Button>
           
           <Button 
