@@ -6,6 +6,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { DashboardAppointments } from '@/components/dashboard/DashboardAppointments';
+import { ProfileDebug } from '@/components/debug/ProfileDebug';
 import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, Plus } from 'lucide-react';
 
@@ -87,10 +88,20 @@ export const DashboardPage = () => {
       <div className="flex h-screen items-center justify-center p-4">
         <div className="max-w-md space-y-4 text-center">
           <h2 className="text-xl font-semibold">Erro ao carregar o dashboard</h2>
-          <p className="text-muted-foreground">{error || 'Ocorreu um erro inesperado'}</p>
+          <p className="text-muted-foreground">
+            {error.includes('Perfil do usuário não encontrado') 
+              ? 'Configurando seu perfil... Por favor, aguarde um momento.'
+              : error || 'Ocorreu um erro inesperado'
+            }
+          </p>
           <Button onClick={refreshData} variant="outline">
             Tentar novamente
           </Button>
+          
+          {/* Debug component for profile issues */}
+          <div className="mt-8">
+            <ProfileDebug />
+          </div>
         </div>
       </div>
     );
