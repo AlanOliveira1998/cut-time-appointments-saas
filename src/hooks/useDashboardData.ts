@@ -109,11 +109,18 @@ export const useDashboardData = () => {
         return null;
       }
 
+      console.log('[useDashboardData] Making Supabase query for profile...');
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
+      console.log('[useDashboardData] Supabase response:', { 
+        hasData: !!data, 
+        error: profileError?.message,
+        errorCode: profileError?.code 
+      });
 
       if (profileError) {
         console.error('[useDashboardData] Error loading profile:', profileError);
@@ -129,11 +136,11 @@ export const useDashboardData = () => {
         throw profileError;
       }
       
-      console.log('[useDashboardData] Profile loaded:', data?.id ? 'success' : 'no data');
+      console.log('[useDashboardData] Profile loaded successfully:', data?.id);
       setProfile(data);
       return data;
     } catch (err) {
-      console.error('Error loading profile:', err);
+      console.error('[useDashboardData] Error loading profile:', err);
       setError('Falha ao carregar perfil');
       return null;
     }
@@ -279,28 +286,44 @@ export const useDashboardData = () => {
   }, [profile]);
 
   const refreshData = useCallback(async () => {
+    console.log('[useDashboardData] Starting refreshData...');
     setLoading(true);
     setError('');
     
     try {
       // First load the profile
+      console.log('[useDashboardData] Loading profile...');
       const loadedProfile = await loadProfile();
+      console.log('[useDashboardData] Profile loaded:', loadedProfile?.id || 'null');
       
       // Then load dashboard stats which depends on the profile
       if (loadedProfile) {
+        console.log('[useDashboardData] Loading dashboard stats...');
         await loadDashboardStats(loadedProfile);
+        console.log('[useDashboardData] Dashboard stats loaded successfully');
+      } else {
+        console.log('[useDashboardData] No profile loaded, skipping stats');
       }
     } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
       setError(err.message || 'Falha ao carregar os dados do painel');
     } finally {
+      console.log('[useDashboardData] Setting loading to false');
       setLoading(false);
     }
   }, [loadProfile, loadDashboardStats]);
 
   useEffect(() => {
+    console.log('[useDashboardData] useEffect triggered:', { 
+      hasUser: !!user, 
+      userId: user?.id 
+    });
+    
     if (user) {
+      console.log('[useDashboardData] Calling refreshData...');
       refreshData();
+    } else {
+      console.log('[useDashboardData] No user, skipping refreshData');
     }
   }, [user, refreshData]);
 
