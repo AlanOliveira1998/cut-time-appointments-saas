@@ -78,6 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session?.user ?? null);
           
+          // Se o usuário foi autenticado, garantir que tenha perfil
+          if (session?.user && event === 'SIGNED_IN') {
+            await ensureUserProfile(session.user);
+          }
+          
           // Só definir loading como false após a inicialização completa
           if (loading) {
             console.log('[AuthContext] Initial loading complete');
@@ -121,6 +126,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
+        // Verificar se o usuário tem perfil, se não tiver, criar um
+        await ensureUserProfile(data.user);
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta ao BarberTime",
@@ -139,6 +147,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para garantir que o usuário tenha um perfil
+  const ensureUserProfile = async (user: User) => {
+    try {
+      console.log('[AuthContext] Ensuring user profile exists for:', user.id);
+      
+      // Verificar se o perfil já existe
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code === 'PGRST116') {
+        // Perfil não existe, criar um
+        console.log('[AuthContext] Profile not found, creating new profile');
+        
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            name: user.user_metadata?.name || user.user_metadata?.full_name || 'Novo Usuário',
+            email: user.email || '',
+            phone: user.user_metadata?.phone || '',
+            subscription_status: 'trial',
+            subscription_start_date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (createError) {
+          console.error('[AuthContext] Error creating profile:', createError);
+          // Não mostrar erro para o usuário, apenas log
+        } else {
+          console.log('[AuthContext] Profile created successfully');
+        }
+      } else if (profileError) {
+        console.error('[AuthContext] Error checking profile:', profileError);
+      } else {
+        console.log('[AuthContext] Profile already exists');
+      }
+    } catch (error) {
+      console.error('[AuthContext] Error in ensureUserProfile:', error);
     }
   };
 
