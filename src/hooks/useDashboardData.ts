@@ -139,7 +139,7 @@ export const useDashboardData = () => {
     }
   }, [user, createProfile]);
 
-  const loadDashboardStats = useCallback(async () => {
+  const loadDashboardStats = useCallback(async (userProfile?: Profile) => {
     if (!user) {
       console.log('[useDashboardData] No user found, skipping stats load');
       return;
@@ -151,16 +151,20 @@ export const useDashboardData = () => {
       // First get the barbers
       let barbersList: { id: string }[] = [];
       
+      // Use the provided profile or the current profile state
+      const currentProfile = userProfile || profile;
+      
       // First ensure we have a profile
-      if (!profile) {
-        throw new Error('Perfil do usuário não encontrado. Por favor, atualize seu perfil primeiro.');
+      if (!currentProfile) {
+        console.log('[useDashboardData] No profile available, skipping stats load');
+        return;
       }
       
       // Check if a barber with this profile already exists
       const { data: existingBarber, error: barberCheckError } = await supabase
         .from('barbers')
         .select('id')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', currentProfile.id)
         .maybeSingle();
         
       if (barberCheckError) {
@@ -175,7 +179,7 @@ export const useDashboardData = () => {
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: profile.id,  // Reference the user's profile
+            profile_id: currentProfile.id,  // Reference the user's profile
             is_active: true,
             specialty: 'Corte de Cabelo',
             experience_years: 1
@@ -255,7 +259,7 @@ export const useDashboardData = () => {
       console.error('Error loading stats:', err);
       setError(err.message);
     }
-  }, [user]);
+  }, [user, profile]);
 
   const calculateTrialDays = useCallback(() => {
     if (!profile) return;
@@ -280,10 +284,12 @@ export const useDashboardData = () => {
     
     try {
       // First load the profile
-      await loadProfile();
+      const loadedProfile = await loadProfile();
       
       // Then load dashboard stats which depends on the profile
-      await loadDashboardStats();
+      if (loadedProfile) {
+        await loadDashboardStats(loadedProfile);
+      }
     } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
       setError(err.message || 'Falha ao carregar os dados do painel');
