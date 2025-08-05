@@ -72,12 +72,7 @@ export const useDashboardData = () => {
     try {
       console.log('[useDashboardData] Creating profile for user:', userId);
       
-      // Adicionar timeout para a criação do perfil
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: Criação do perfil demorou mais de 5 segundos')), 5000);
-      });
-      
-      const createPromise = supabase
+      const { data, error: createError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
@@ -90,8 +85,6 @@ export const useDashboardData = () => {
         })
         .select('*')
         .single();
-
-      const { data, error: createError } = await Promise.race([createPromise, timeoutPromise]) as any;
 
       if (createError) {
         console.error('[useDashboardData] Error creating profile:', createError);
@@ -118,27 +111,24 @@ export const useDashboardData = () => {
       // Pular teste de conectividade por enquanto - ir direto para a consulta principal
       console.log('[useDashboardData] Skipping connectivity test, going directly to profile query...');
 
-      console.log('[useDashboardData] Attempting to create profile directly...');
+      console.log('[useDashboardData] Attempting to query existing profile first...');
       
       try {
-        // Tentar criar o perfil diretamente sem consultar primeiro
-        const newProfile = await createProfile(user.id);
-        console.log('[useDashboardData] Profile created successfully:', newProfile?.id);
-        setProfile(newProfile);
-        return newProfile;
-      } catch (createError) {
-        console.error('[useDashboardData] Error creating profile directly:', createError);
-        
-        // Se falhar na criação, tentar consultar
-        console.log('[useDashboardData] Trying to query existing profile...');
-        
+        // Primeiro tentar consultar o perfil existente
         const { data, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
 
-        if (profileError) {
+        if (profileError && profileError.code === 'PGRST116') {
+          // Perfil não existe, criar um
+          console.log('[useDashboardData] Profile not found, creating new profile...');
+          const newProfile = await createProfile(user.id);
+          console.log('[useDashboardData] Profile created successfully:', newProfile?.id);
+          setProfile(newProfile);
+          return newProfile;
+        } else if (profileError) {
           console.error('[useDashboardData] Error loading profile:', profileError);
           throw profileError;
         }
@@ -146,6 +136,9 @@ export const useDashboardData = () => {
         console.log('[useDashboardData] Profile loaded successfully:', data?.id);
         setProfile(data);
         return data;
+      } catch (error) {
+        console.error('[useDashboardData] Error in profile query/creation:', error);
+        throw error;
       }
     } catch (err) {
       console.error('[useDashboardData] Error loading profile:', err);
