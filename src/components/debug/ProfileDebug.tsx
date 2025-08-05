@@ -35,7 +35,6 @@ export const ProfileDebug: React.FC = () => {
           .insert({
             id: user.id,
             name: user.user_metadata?.name || user.user_metadata?.full_name || 'Novo Usuário',
-            email: user.email || '',
             phone: user.user_metadata?.phone || '',
             subscription_status: 'trial',
             subscription_start_date: new Date().toISOString(),
@@ -69,18 +68,17 @@ export const ProfileDebug: React.FC = () => {
     try {
       const testUserId = 'test-user-' + Date.now();
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: testUserId,
-          name: 'Test User',
-          email: 'test@example.com',
-          phone: '',
-          subscription_status: 'trial',
-          subscription_start_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+             const { data, error } = await supabase
+         .from('profiles')
+         .insert({
+           id: testUserId,
+           name: 'Test User',
+           phone: '',
+           subscription_status: 'trial',
+           subscription_start_date: new Date().toISOString(),
+           created_at: new Date().toISOString(),
+           updated_at: new Date().toISOString()
+         })
         .select('*')
         .single();
 
