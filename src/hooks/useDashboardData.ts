@@ -82,7 +82,6 @@ export const useDashboardData = () => {
         .insert({
           id: userId,
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Novo Usuário',
-          email: user?.email || '',
           phone: user?.user_metadata?.phone || '',
           subscription_status: 'trial',
           subscription_start_date: new Date().toISOString(),
