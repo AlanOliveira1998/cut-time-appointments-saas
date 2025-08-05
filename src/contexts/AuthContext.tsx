@@ -50,11 +50,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setSession(session);
           setUser(session?.user ?? null);
-          setLoading(false);
+          
+          // Se não há sessão, definir loading como false imediatamente
+          if (!session) {
+            console.log('[AuthContext] No session found, setting loading to false');
+            setLoading(false);
+          }
+          // Se há sessão, o loading será definido como false no listener
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
         if (mounted) {
+          console.log('[AuthContext] Error occurred, setting loading to false');
           setLoading(false);
         }
       }
@@ -83,11 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await ensureUserProfile(session.user);
           }
           
-          // Só definir loading como false após a inicialização completa
-          if (loading) {
-            console.log('[AuthContext] Initial loading complete');
-            setLoading(false);
-          }
+          // Sempre definir loading como false após processar a mudança de estado
+          console.log('[AuthContext] Setting loading to false');
+          setLoading(false);
         }
       }
     );
@@ -95,9 +100,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Inicializar autenticação
     initializeAuth();
 
+    // Timeout de segurança para garantir que o loading não fique preso
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.log('[AuthContext] Safety timeout reached, setting loading to false');
+        setLoading(false);
+      }
+    }, 5000); // 5 segundos
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, []);
 
