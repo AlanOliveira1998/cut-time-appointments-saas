@@ -68,6 +68,38 @@ export const useDashboardData = () => {
   
   console.log('[useDashboardData] Initial state:', { loading, error, hasUser: !!user });
 
+  const createProfile = useCallback(async (userId: string) => {
+    try {
+      console.log('[useDashboardData] Creating profile for user:', userId);
+      
+      const { data, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          name: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Novo Usuário',
+          email: user?.email || '',
+          phone: user?.user_metadata?.phone || '',
+          subscription_status: 'trial',
+          subscription_start_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('[useDashboardData] Error creating profile:', createError);
+        throw createError;
+      }
+
+      console.log('[useDashboardData] Profile created successfully:', data?.id);
+      return data;
+    } catch (err) {
+      console.error('[useDashboardData] Error in createProfile:', err);
+      throw err;
+    }
+  }, [user]);
+
   const loadProfile = useCallback(async () => {
     try {
       console.log('[useDashboardData] Loading profile for user:', user?.id || 'no user');
@@ -85,6 +117,15 @@ export const useDashboardData = () => {
 
       if (profileError) {
         console.error('[useDashboardData] Error loading profile:', profileError);
+        
+        // Se o erro for PGRST116 (perfil não encontrado), criar o perfil
+        if (profileError.code === 'PGRST116') {
+          console.log('[useDashboardData] Profile not found, creating new profile');
+          const newProfile = await createProfile(user.id);
+          setProfile(newProfile);
+          return newProfile;
+        }
+        
         throw profileError;
       }
       
@@ -96,7 +137,7 @@ export const useDashboardData = () => {
       setError('Falha ao carregar perfil');
       return null;
     }
-  }, []);
+  }, [user, createProfile]);
 
   const loadDashboardStats = useCallback(async () => {
     if (!user) {
