@@ -72,7 +72,12 @@ export const useDashboardData = () => {
     try {
       console.log('[useDashboardData] Creating profile for user:', userId);
       
-      const { data, error: createError } = await supabase
+      // Adicionar timeout para a criação do perfil
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Criação do perfil demorou mais de 5 segundos')), 5000);
+      });
+      
+      const createPromise = supabase
         .from('profiles')
         .insert({
           id: userId,
@@ -86,6 +91,8 @@ export const useDashboardData = () => {
         })
         .select('*')
         .single();
+
+      const { data, error: createError } = await Promise.race([createPromise, timeoutPromise]) as any;
 
       if (createError) {
         console.error('[useDashboardData] Error creating profile:', createError);
@@ -109,71 +116,38 @@ export const useDashboardData = () => {
         return null;
       }
 
-      // Verificar conectividade com Supabase
-      console.log('[useDashboardData] Testing Supabase connectivity...');
+      // Pular teste de conectividade por enquanto - ir direto para a consulta principal
+      console.log('[useDashboardData] Skipping connectivity test, going directly to profile query...');
+
+      console.log('[useDashboardData] Attempting to create profile directly...');
+      
       try {
-        const { data: testData, error: testError } = await supabase
+        // Tentar criar o perfil diretamente sem consultar primeiro
+        const newProfile = await createProfile(user.id);
+        console.log('[useDashboardData] Profile created successfully:', newProfile?.id);
+        setProfile(newProfile);
+        return newProfile;
+      } catch (createError) {
+        console.error('[useDashboardData] Error creating profile directly:', createError);
+        
+        // Se falhar na criação, tentar consultar
+        console.log('[useDashboardData] Trying to query existing profile...');
+        
+        const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('count')
-          .limit(1);
-        
-        if (testError) {
-          console.error('[useDashboardData] Supabase connectivity test failed:', testError);
-          throw new Error(`Erro de conectividade com Supabase: ${testError.message}`);
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('[useDashboardData] Error loading profile:', profileError);
+          throw profileError;
         }
         
-        console.log('[useDashboardData] Supabase connectivity test passed');
-      } catch (connectivityError) {
-        console.error('[useDashboardData] Connectivity error:', connectivityError);
-        throw connectivityError;
+        console.log('[useDashboardData] Profile loaded successfully:', data?.id);
+        setProfile(data);
+        return data;
       }
-
-      console.log('[useDashboardData] Making Supabase query for profile...');
-      
-      // Adicionar timeout para a consulta Supabase
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: Consulta Supabase demorou mais de 10 segundos')), 10000);
-      });
-      
-      const supabasePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      const { data, error: profileError } = await Promise.race([supabasePromise, timeoutPromise]) as any;
-
-      console.log('[useDashboardData] Supabase response:', { 
-        hasData: !!data, 
-        error: profileError?.message,
-        errorCode: profileError?.code 
-      });
-
-      if (profileError) {
-        console.error('[useDashboardData] Error loading profile:', profileError);
-        
-        // Se o erro for PGRST116 (perfil não encontrado), criar o perfil
-        if (profileError.code === 'PGRST116') {
-          console.log('[useDashboardData] Profile not found, creating new profile');
-          const newProfile = await createProfile(user.id);
-          setProfile(newProfile);
-          return newProfile;
-        }
-        
-        // Se for timeout ou erro de conectividade, tentar criar perfil diretamente
-        if (profileError.message?.includes('Timeout') || profileError.message?.includes('connectivity')) {
-          console.log('[useDashboardData] Timeout/connectivity error, creating profile directly');
-          const newProfile = await createProfile(user.id);
-          setProfile(newProfile);
-          return newProfile;
-        }
-        
-        throw profileError;
-      }
-      
-      console.log('[useDashboardData] Profile loaded successfully:', data?.id);
-      setProfile(data);
-      return data;
     } catch (err) {
       console.error('[useDashboardData] Error loading profile:', err);
       setError('Falha ao carregar perfil');
