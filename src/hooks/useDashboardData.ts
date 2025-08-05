@@ -109,12 +109,39 @@ export const useDashboardData = () => {
         return null;
       }
 
+      // Verificar conectividade com Supabase
+      console.log('[useDashboardData] Testing Supabase connectivity...');
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('profiles')
+          .select('count')
+          .limit(1);
+        
+        if (testError) {
+          console.error('[useDashboardData] Supabase connectivity test failed:', testError);
+          throw new Error(`Erro de conectividade com Supabase: ${testError.message}`);
+        }
+        
+        console.log('[useDashboardData] Supabase connectivity test passed');
+      } catch (connectivityError) {
+        console.error('[useDashboardData] Connectivity error:', connectivityError);
+        throw connectivityError;
+      }
+
       console.log('[useDashboardData] Making Supabase query for profile...');
-      const { data, error: profileError } = await supabase
+      
+      // Adicionar timeout para a consulta Supabase
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Consulta Supabase demorou mais de 10 segundos')), 10000);
+      });
+      
+      const supabasePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
+      const { data, error: profileError } = await Promise.race([supabasePromise, timeoutPromise]) as any;
 
       console.log('[useDashboardData] Supabase response:', { 
         hasData: !!data, 
@@ -128,6 +155,14 @@ export const useDashboardData = () => {
         // Se o erro for PGRST116 (perfil não encontrado), criar o perfil
         if (profileError.code === 'PGRST116') {
           console.log('[useDashboardData] Profile not found, creating new profile');
+          const newProfile = await createProfile(user.id);
+          setProfile(newProfile);
+          return newProfile;
+        }
+        
+        // Se for timeout ou erro de conectividade, tentar criar perfil diretamente
+        if (profileError.message?.includes('Timeout') || profileError.message?.includes('connectivity')) {
+          console.log('[useDashboardData] Timeout/connectivity error, creating profile directly');
           const newProfile = await createProfile(user.id);
           setProfile(newProfile);
           return newProfile;
