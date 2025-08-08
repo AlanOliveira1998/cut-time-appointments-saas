@@ -68,8 +68,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Evitar re-renders desnecessários
+        setSession(prevSession => {
+          if (prevSession?.access_token === session?.access_token) {
+            return prevSession;
+          }
+          return session;
+        });
+        
+        setUser(prevUser => {
+          if (prevUser?.id === session?.user?.id) {
+            return prevUser;
+          }
+          return session?.user ?? null;
+        });
+        
         setLoading(false);
         console.log('[AuthContext] Loading set to false (auth state change)');
         
