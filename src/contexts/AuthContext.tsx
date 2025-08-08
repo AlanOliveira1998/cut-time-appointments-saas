@@ -99,10 +99,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Se o usuário foi autenticado, garantir que tenha perfil
         if (session?.user && event === 'SIGNED_IN') {
           console.log('[AuthContext] User signed in, ensuring profile...');
-          // Usar Promise sem await para evitar retornar true
-          ensureUserProfile(session.user).catch((error) => {
-            console.error('[AuthContext] Error ensuring profile:', error);
-          });
+          // Usar setTimeout para tornar a chamada assíncrona e evitar retornar Promise
+          setTimeout(() => {
+            if (mounted) {
+              ensureUserProfile(session.user).catch((error) => {
+                console.error('[AuthContext] Error ensuring profile:', error);
+              });
+            }
+          }, 0);
         }
       }
     );

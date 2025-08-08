@@ -376,7 +376,12 @@ export const useDashboardData = () => {
         if (mountedRef.current && !loading) {
           console.log('[useDashboardData] Executing refresh after debounce');
           isInitialized.current = true;
-          refreshData();
+          // Usar setTimeout para evitar problemas de concorrência
+          setTimeout(() => {
+            if (mountedRef.current) {
+              refreshData();
+            }
+          }, 0);
         } else if (!mountedRef.current) {
           console.log('[useDashboardData] Component unmounted, skipping refresh');
         } else if (loading) {
