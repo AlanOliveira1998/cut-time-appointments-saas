@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let subscription: any = null;
 
     const initializeAuth = async () => {
       try {
@@ -57,52 +58,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Configurar listener para mudanças de estado
-    const { data: { subscription } } = AuthService.onAuthStateChange(
-      async (event, session) => {
+    // Configurar listener para mudanças de estado - SEM async/await
+    const { data: { subscription: authSubscription } } = AuthService.onAuthStateChange(
+      (event, session) => {
         console.log('[AuthContext] Auth state change:', event, session ? 'User present' : 'No user');
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-          console.log('[AuthContext] Loading set to false (auth state change)');
-          
-          // Se o usuário foi autenticado, garantir que tenha perfil
-          if (session?.user && event === 'SIGNED_IN') {
-            console.log('[AuthContext] User signed in, ensuring profile...');
-            try {
-              await ensureUserProfile(session.user);
-              console.log('[AuthContext] Profile ensured successfully');
-            } catch (error) {
-              console.error('[AuthContext] Error ensuring profile:', error);
-            }
-          }
+        
+        if (!mounted) {
+          console.log('[AuthContext] Component unmounted, ignoring auth state change');
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        console.log('[AuthContext] Loading set to false (auth state change)');
+        
+        // Se o usuário foi autenticado, garantir que tenha perfil
+        if (session?.user && event === 'SIGNED_IN') {
+          console.log('[AuthContext] User signed in, ensuring profile...');
+          // Usar Promise sem await para evitar retornar true
+          ensureUserProfile(session.user).catch((error) => {
+            console.error('[AuthContext] Error ensuring profile:', error);
+          });
         }
       }
     );
 
+    subscription = authSubscription;
+
     // Inicializar autenticação
     initializeAuth();
     
-    // Fallback: garantir que loading seja false após 2 segundos
+    // Fallback: garantir que loading seja false após 3 segundos
     const fallbackTimeout = setTimeout(() => {
       if (mounted) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
       }
-    }, 2000);
+    }, 3000);
     
     // Cleanup function
     return () => {
+      console.log('[AuthContext] Cleaning up auth context');
       mounted = false;
       clearTimeout(fallbackTimeout);
-      subscription?.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+        console.log('[AuthContext] Auth subscription unsubscribed');
+      }
     };
   }, []);
 
   // Função para garantir que o usuário tenha um perfil
   const ensureUserProfile = async (user: User) => {
     try {
+      console.log('[AuthContext] Ensuring profile for user:', user.id);
+      
       // Verificar se o perfil já existe usando o AuthService
       const { data: profileExists, error: profileError } = await AuthService.checkProfileExists(user.id);
       
@@ -112,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (!profileExists) {
+        console.log('[AuthContext] Profile does not exist, creating new one...');
         // Perfil não existe, criar um usando o AuthService
         const { error: createError } = await AuthService.createProfile({
           id: user.id,
@@ -125,7 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (createError) {
           console.error('[AuthContext] Error creating profile:', createError);
+        } else {
+          console.log('[AuthContext] Profile created successfully');
         }
+      } else {
+        console.log('[AuthContext] Profile already exists');
       }
     } catch (error) {
       console.error('[AuthContext] Error in ensureUserProfile:', error);
