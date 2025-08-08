@@ -6,9 +6,10 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { DashboardAppointments } from '@/components/dashboard/DashboardAppointments';
+import { BarbersList } from '@/components/dashboard/BarbersList';
 import { ProfileDebug } from '@/components/debug/ProfileDebug';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, Plus } from 'lucide-react';
+import { Loader2, Calendar, Plus, Users } from 'lucide-react';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
@@ -142,56 +143,47 @@ export const DashboardPage = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-background">
       <DashboardSidebar 
         mobileMenuOpen={mobileMenuOpen} 
         onCloseMobileMenu={closeMobileMenu} 
       />
       
-      {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho */}
+      <div className="lg:pl-64">
         <DashboardHeader 
-          onToggleMobileMenu={toggleMobileMenu}
-          mobileMenuOpen={mobileMenuOpen}
+          onMenuToggle={toggleMobileMenu}
+          profile={profile}
           daysRemaining={daysRemaining}
         />
         
-        {/* Conteúdo */}
-        <main className="flex-1 overflow-y-auto bg-muted/40 p-4 md:p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            {/* Cabeçalho da página */}
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <main className="p-6 space-y-8">
+          {/* Visão Geral */}
+          <DashboardOverview 
+            stats={stats} 
+            onNewAppointment={handleNewAppointment}
+          />
+          
+          {/* Agendamentos Recentes */}
+          <DashboardAppointments 
+            appointments={stats.recentAppointments}
+            onViewAppointment={handleViewAppointment}
+          />
+          
+          {/* Lista de Barbeiros - NOVA SEÇÃO */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Visão Geral</h1>
+                <h2 className="text-2xl font-bold tracking-tight">Barbeiros</h2>
                 <p className="text-muted-foreground">
-                  Bem-vindo de volta, {profile?.name || 'usuário'}!
+                  Gerencie sua equipe e copie links de agendamento
                 </p>
               </div>
-              <Button onClick={handleNewAppointment} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Agendamento
+              <Button onClick={() => navigate('/dashboard/services')}>
+                <Users className="mr-2 h-4 w-4" />
+                Gerenciar Serviços
               </Button>
             </div>
-            
-            {/* Cartões de visão geral */}
-            <DashboardOverview 
-              stats={{
-                totalAppointments: stats?.totalAppointments || 0,
-                pendingAppointments: stats?.pendingAppointments || 0,
-                totalRevenue: stats?.totalRevenue || 0,
-                averageServiceTime: stats?.averageServiceTime || '0 min',
-              }} 
-              loading={dataLoading}
-            />
-            
-            {/* Recent appointments */}
-            <DashboardAppointments 
-              appointments={stats?.recentAppointments || []}
-              loading={dataLoading}
-              onViewAppointment={handleViewAppointment}
-            />
+            <BarbersList />
           </div>
         </main>
       </div>

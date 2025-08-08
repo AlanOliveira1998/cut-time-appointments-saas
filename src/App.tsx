@@ -14,6 +14,7 @@ import { ServicesPage } from "./pages/ServicesPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import BarbersManagementPage from "./pages/BarbersManagementPage";
 import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
@@ -95,6 +96,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <FinancePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/barbeiros" 
+        element={
+          <ProtectedRoute>
+            <BarbersManagementPage />
           </ProtectedRoute>
         } 
       />

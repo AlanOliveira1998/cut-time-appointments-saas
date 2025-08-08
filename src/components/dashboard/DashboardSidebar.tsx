@@ -16,6 +16,11 @@ const sidebarItems = [
     icon: Calendar,
   },
   {
+    title: 'Barbeiros',
+    href: '/dashboard/barbeiros',
+    icon: Users,
+  },
+  {
     title: 'Serviços',
     href: '/dashboard/services',
     icon: Scissors,

@@ -28,8 +28,24 @@ interface Barber {
   } | null;
 }
 
-export const BarbersList: React.FC = () => {
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+interface BarbersListProps {
+  barbers?: Barber[];
+  onEditBarber?: (id: string) => void;
+  onDeleteBarber?: (id: string) => void;
+  onToggleStatus?: (id: string) => void;
+  showActions?: boolean;
+  showAddButton?: boolean;
+}
+
+export const BarbersList: React.FC<BarbersListProps> = ({
+  barbers: externalBarbers,
+  onEditBarber,
+  onDeleteBarber,
+  onToggleStatus,
+  showActions = true,
+  showAddButton = true
+}) => {
+  const [internalBarbers, setInternalBarbers] = useState<Barber[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
@@ -42,9 +58,16 @@ export const BarbersList: React.FC = () => {
   });
   const { user } = useAuth();
 
+  // Usar barbeiros externos se fornecidos, senão buscar internamente
+  const barbers = externalBarbers || internalBarbers;
+
   useEffect(() => {
-    fetchBarbers();
-  }, []);
+    if (!externalBarbers) {
+      fetchBarbers();
+    } else {
+      setIsLoading(false);
+    }
+  }, [externalBarbers]);
 
   const fetchBarbers = async () => {
     try {
@@ -69,7 +92,7 @@ export const BarbersList: React.FC = () => {
       }
       
       console.log('✅ Barbeiros carregados com sucesso:', data?.length || 0);
-      setBarbers((data || []) as Barber[]);
+      setInternalBarbers((data || []) as Barber[]);
     } catch (error: any) {
       console.error('💥 Erro crítico ao buscar barbeiros:', error);
       toast({
@@ -127,62 +150,50 @@ export const BarbersList: React.FC = () => {
           description: "Barbeiro atualizado com sucesso",
         });
       } else {
-        console.log('➕ Modo criação - Cadastrando novo barbeiro funcionário');
+        console.log('🆕 Modo criação - Cadastrando novo barbeiro');
         
-        // Buscar o barbeiro owner atual
-        const { data: ownerBarber, error: ownerError } = await supabase
-          .from('barbers')
-          .select('id, profile_id')
-          .eq('profile_id', user?.id)
-          .eq('role', 'owner')
-          .single();
-
-        if (ownerError || !ownerBarber) {
-          console.error('❌ Usuário não é um barbeiro owner:', ownerError);
-          throw new Error('Você precisa ser um barbeiro owner para cadastrar funcionários');
-        }
-
-        console.log('✅ Barbeiro owner encontrado:', ownerBarber.id);
-
-        // Criar novo barbeiro funcionário (sem profile separado)
-        console.log('💼 Criando novo barbeiro funcionário...');
-        const { data: barberData, error: barberError } = await supabase
-          .from('barbers')
-          .insert([{
-            profile_id: null, // Funcionários não têm profile próprio
-            specialty: formData.specialty,
-            experience_years: formData.experience_years,
-            is_active: formData.is_active,
-            role: 'employee',
-            owner_id: ownerBarber.id,
-            // Armazenar dados do funcionário diretamente na tabela barbers
-            employee_name: formData.name,
-            employee_phone: formData.phone
-          }])
+        // Criar novo profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            name: formData.name,
+            phone: formData.phone
+          })
           .select()
           .single();
 
-        if (barberError) {
-          console.error('❌ Erro ao criar barbeiro funcionário:', barberError);
-          console.error('📋 Detalhes do erro:', {
-            code: barberError.code,
-            message: barberError.message,
-            details: barberError.details,
-            hint: barberError.hint
+        if (profileError) {
+          console.error('❌ Erro ao criar profile:', profileError);
+          throw profileError;
+        }
+
+        console.log('✅ Profile criado:', profileData);
+
+        // Criar novo barbeiro
+        const { error: barberError } = await supabase
+          .from('barbers')
+          .insert({
+            profile_id: profileData.id,
+            specialty: formData.specialty,
+            experience_years: formData.experience_years,
+            is_active: formData.is_active,
+            owner_id: user?.id,
+            role: 'employee'
           });
+
+        if (barberError) {
+          console.error('❌ Erro ao criar barbeiro:', barberError);
           throw barberError;
         }
 
-        console.log('✅ Barbeiro funcionário criado com sucesso:', barberData);
+        console.log('✅ Barbeiro criado com sucesso');
         toast({
           title: "Sucesso!",
-          description: "Barbeiro funcionário cadastrado com sucesso",
+          description: "Barbeiro cadastrado com sucesso",
         });
       }
 
-      // Resetar formulário e fechar dialog
-      setIsDialogOpen(false);
-      setEditingBarber(null);
+      // Limpar formulário e fechar dialog
       setFormData({
         name: '',
         phone: '',
@@ -190,80 +201,74 @@ export const BarbersList: React.FC = () => {
         experience_years: 0,
         is_active: true
       });
-      
-      // Recarregar lista
-      console.log('🔄 Recarregando lista de barbeiros...');
-      fetchBarbers();
-      
-    } catch (error: any) {
-      console.error('💥 Erro crítico no processo:', error);
-      
-      // Mensagem de erro mais específica
-      let errorMessage = "Não foi possível salvar o barbeiro";
-      
-      if (error.code === '42501') {
-        errorMessage = "Erro de permissão: Verifique se você tem acesso para criar barbeiros";
-      } else if (error.code === '23505') {
-        errorMessage = "Já existe um barbeiro com esses dados";
-      } else if (error.message) {
-        errorMessage = `Erro: ${error.message}`;
+      setEditingBarber(null);
+      setIsDialogOpen(false);
+
+      // Recarregar lista se não estiver usando barbeiros externos
+      if (!externalBarbers) {
+        fetchBarbers();
       }
-      
+    } catch (error: any) {
+      console.error('💥 Erro ao salvar barbeiro:', error);
       toast({
         title: "Erro",
-        description: errorMessage,
+        description: `Não foi possível salvar o barbeiro: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
   const handleEdit = (barber: Barber) => {
-    console.log('✏️ Editando barbeiro:', barber);
-    setEditingBarber(barber);
-    setFormData({
-      name: barber.profiles?.name || barber.employee_name || '',
-      phone: barber.profiles?.phone || barber.employee_phone || '',
-      specialty: barber.specialty || '',
-      experience_years: barber.experience_years,
-      is_active: barber.is_active
-    });
-    setIsDialogOpen(true);
+    if (onEditBarber) {
+      onEditBarber(barber.id);
+    } else {
+      setEditingBarber(barber);
+      setFormData({
+        name: barber.profiles?.name || barber.employee_name || '',
+        phone: barber.profiles?.phone || barber.employee_phone || '',
+        specialty: barber.specialty || '',
+        experience_years: barber.experience_years || 0,
+        is_active: barber.is_active
+      });
+      setIsDialogOpen(true);
+    }
   };
 
   const handleDelete = async (barberId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este barbeiro?')) return;
+    if (onDeleteBarber) {
+      onDeleteBarber(barberId);
+      return;
+    }
 
-    try {
-      console.log('🗑️ Excluindo barbeiro:', barberId);
-      
-      const { error } = await supabase
-        .from('barbers')
-        .delete()
-        .eq('id', barberId);
+    if (confirm('Tem certeza que deseja excluir este barbeiro?')) {
+      try {
+        const { error } = await supabase
+          .from('barbers')
+          .delete()
+          .eq('id', barberId);
 
-      if (error) {
-        console.error('❌ Erro ao excluir barbeiro:', error);
-        throw error;
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso!",
+          description: "Barbeiro excluído com sucesso",
+        });
+
+        // Recarregar lista se não estiver usando barbeiros externos
+        if (!externalBarbers) {
+          fetchBarbers();
+        }
+      } catch (error: any) {
+        toast({
+          title: "Erro",
+          description: `Não foi possível excluir o barbeiro: ${error.message}`,
+          variant: "destructive",
+        });
       }
-
-      console.log('✅ Barbeiro excluído com sucesso');
-      toast({
-        title: "Sucesso!",
-        description: "Barbeiro excluído com sucesso",
-      });
-      fetchBarbers();
-    } catch (error: any) {
-      console.error('💥 Erro ao excluir barbeiro:', error);
-      toast({
-        title: "Erro",
-        description: `Não foi possível excluir o barbeiro: ${error.message}`,
-        variant: "destructive",
-      });
     }
   };
 
   const openNewBarberDialog = () => {
-    console.log('➕ Abrindo dialog para novo barbeiro');
     setEditingBarber(null);
     setFormData({
       name: '',
@@ -276,18 +281,16 @@ export const BarbersList: React.FC = () => {
   };
 
   const getBarberBookingUrl = (barber: Barber) => {
-    const barberName = barber.profiles?.name || barber.employee_name || '';
-    if (!barberName) return `${window.location.origin}/booking`;
-    
-    const barberSlug = barberName
+    const baseUrl = window.location.origin;
+    const barberName = barber.profiles?.name || barber.employee_name || 'barbeiro';
+    const normalizedName = barberName
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
-      .replace(/\s+/g, '-') // Substitui espaços por hífens
-      .trim();
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     
-    return `${window.location.origin}/booking/${barberSlug}`;
+    return `${baseUrl}/booking/${normalizedName}`;
   };
 
   const copyBarberLink = (barber: Barber) => {
@@ -304,138 +307,117 @@ export const BarbersList: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  // Debug: Verificar estado atual
-  console.log('🔍 Estado atual:', {
-    barbersCount: barbers.length,
-    isLoading,
-    user: user?.id,
-    isDialogOpen
-  });
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando barbeiros...</p>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Barbeiros</h2>
-          <p className="text-gray-600">Gerencie os profissionais da sua barbearia</p>
+    <div>
+      {showAddButton && (
+        <div className="mb-6">
+          <Button onClick={openNewBarberDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Adicionar Barbeiro
+          </Button>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewBarberDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Barbeiro
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingBarber ? 'Editar Barbeiro' : 'Novo Barbeiro'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingBarber
-                  ? 'Edite as informações do barbeiro'
-                  : 'Adicione um novo barbeiro à sua equipe'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                  placeholder="Digite o nome do barbeiro"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="(11) 99999-9999"
-                />
-              </div>
-              <div>
-                <Label htmlFor="specialty">Especialidade</Label>
-                <Select
-                  value={formData.specialty}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, specialty: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a especialidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Corte Masculino">Corte Masculino</SelectItem>
-                    <SelectItem value="Barba">Barba</SelectItem>
-                    <SelectItem value="Corte + Barba">Corte + Barba</SelectItem>
-                    <SelectItem value="Corte Infantil">Corte Infantil</SelectItem>
-                    <SelectItem value="Todos os Serviços">Todos os Serviços</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="experience">Anos de Experiência</Label>
-                <Input
-                  id="experience"
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={formData.experience_years}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    experience_years: parseInt(e.target.value) || 0
-                  }))}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                />
-                <Label htmlFor="active">Ativo</Label>
-              </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingBarber ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      )}
+
+      {/* Dialog para adicionar/editar barbeiro */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingBarber ? 'Editar Barbeiro' : 'Adicionar Novo Barbeiro'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingBarber 
+                ? 'Atualize as informações do barbeiro' 
+                : 'Preencha as informações para cadastrar um novo barbeiro'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome completo"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div>
+              <Label htmlFor="specialty">Especialidade</Label>
+              <Input
+                id="specialty"
+                value={formData.specialty}
+                onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
+                placeholder="Ex: Barba, Cabelo, Sombrancelha"
+              />
+            </div>
+            <div>
+              <Label htmlFor="experience_years">Anos de Experiência</Label>
+              <Input
+                id="experience_years"
+                type="number"
+                min="0"
+                value={formData.experience_years}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  experience_years: parseInt(e.target.value) || 0
+                }))}
+                placeholder="0"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+              <Label htmlFor="active">Ativo</Label>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingBarber ? 'Atualizar' : 'Cadastrar'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {barbers.length === 0 ? (
         <div className="text-center py-12">
           <User className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum barbeiro cadastrado</h3>
           <p className="text-gray-500 mb-4">Comece adicionando o primeiro barbeiro da sua equipe.</p>
-          <Button onClick={openNewBarberDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Primeiro Barbeiro
-          </Button>
+          {showAddButton && (
+            <Button onClick={openNewBarberDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Primeiro Barbeiro
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -473,38 +455,40 @@ export const BarbersList: React.FC = () => {
                     <strong>Experiência:</strong> {barber.experience_years} anos
                   </p>
                 </div>
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyBarberLink(barber)}
-                    title="Copiar link do barbeiro"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openBarberLink(barber)}
-                    title="Abrir página do barbeiro"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(barber)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(barber.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {showActions && (
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyBarberLink(barber)}
+                      title="Copiar link do barbeiro"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openBarberLink(barber)}
+                      title="Abrir página do barbeiro"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(barber)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(barber.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

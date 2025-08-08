@@ -6,14 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 interface DashboardHeaderProps {
-  onToggleMobileMenu: () => void;
-  mobileMenuOpen: boolean;
+  onMenuToggle: () => void;
+  profile?: any;
   daysRemaining: number;
 }
 
 export const DashboardHeader = ({
-  onToggleMobileMenu,
-  mobileMenuOpen,
+  onMenuToggle,
+  profile,
   daysRemaining
 }: DashboardHeaderProps) => {
   const { user, logout } = useAuth();
@@ -44,13 +44,9 @@ export const DashboardHeader = ({
         variant="outline"
         size="icon"
         className="sm:hidden"
-        onClick={onToggleMobileMenu}
+        onClick={onMenuToggle}
       >
-        {mobileMenuOpen ? (
-          <Menu className="h-5 w-5" />
-        ) : (
-          <Menu className="h-5 w-5" />
-        )}
+        <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle menu</span>
       </Button>
 
