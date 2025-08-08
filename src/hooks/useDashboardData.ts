@@ -106,7 +106,7 @@ export const useDashboardData = () => {
 
       console.log('[useDashboardData] Checking for existing profile...');
       
-      // Try to get profile without timeout first
+      // Simple query without timeout - let Supabase handle it
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -122,7 +122,11 @@ export const useDashboardData = () => {
         return newProfile;
       } else if (profileError) {
         console.error('[useDashboardData] Profile error:', profileError);
-        throw profileError;
+        // Se for outro erro, tentar criar o perfil mesmo assim
+        console.log('[useDashboardData] Trying to create profile due to error...');
+        const newProfile = await createProfile(userId, user?.user_metadata);
+        setProfile(newProfile);
+        return newProfile;
       }
       
       console.log('[useDashboardData] Existing profile found');
@@ -130,7 +134,7 @@ export const useDashboardData = () => {
       return data;
     } catch (err) {
       console.error('[useDashboardData] Error loading profile:', err);
-      setError('Falha ao carregar perfil');
+      // Não definir erro aqui, apenas log
       return null;
     }
   }, [user?.user_metadata, createProfile]);
@@ -278,12 +282,6 @@ export const useDashboardData = () => {
     setLoading(true);
     setError('');
     
-    // Add timeout to prevent hanging
-    const timeoutId = setTimeout(() => {
-      console.warn('[useDashboardData] Timeout reached, forcing loading to false');
-      setLoading(false);
-    }, 10000);
-    
     try {
       // First load the profile
       console.log('[useDashboardData] Loading profile...');
@@ -295,12 +293,17 @@ export const useDashboardData = () => {
         console.log('[useDashboardData] Loading dashboard stats...');
         await loadDashboardStats(loadedProfile);
         console.log('[useDashboardData] Dashboard stats loaded successfully');
+      } else {
+        console.log('[useDashboardData] No profile loaded, setting empty stats');
+        setStats({
+          ...INIT_STATS,
+          recentAppointments: []
+        });
       }
     } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
       setError(err.message || 'Falha ao carregar os dados do painel');
     } finally {
-      clearTimeout(timeoutId);
       console.log('[useDashboardData] Setting loading to false');
       setLoading(false);
     }
