@@ -96,9 +96,11 @@ export const useDashboardData = () => {
   const loadProfile = useCallback(async (userId: string) => {
     try {
       if (!userId) {
+        console.log('[useDashboardData] No userId provided');
         return null;
       }
 
+      console.log('[useDashboardData] Checking for existing profile...');
       // Primeiro tentar consultar o perfil existente
       const { data, error: profileError } = await supabase
         .from('profiles')
@@ -108,13 +110,16 @@ export const useDashboardData = () => {
 
       if (profileError && profileError.code === 'PGRST116') {
         // Perfil não existe, criar um
+        console.log('[useDashboardData] Profile not found, creating new one...');
         const newProfile = await createProfile(userId, user?.user_metadata);
         setProfile(newProfile);
+        console.log('[useDashboardData] New profile created:', newProfile ? 'success' : 'failed');
         return newProfile;
       } else if (profileError) {
         throw profileError;
       }
       
+      console.log('[useDashboardData] Existing profile found');
       setProfile(data);
       return data;
     } catch (err) {
@@ -126,10 +131,12 @@ export const useDashboardData = () => {
 
   const loadDashboardStats = useCallback(async (userProfile: Profile) => {
     if (!userProfile) {
+      console.log('[useDashboardData] No userProfile provided');
       return;
     }
 
     try {
+      console.log('[useDashboardData] Checking for existing barber...');
       // Check if a barber with this profile already exists
       const { data: existingBarber, error: barberCheckError } = await supabase
         .from('barbers')
@@ -145,6 +152,7 @@ export const useDashboardData = () => {
       
       // If no barber exists for this profile, create one
       if (!existingBarber) {
+        console.log('[useDashboardData] No barber found, creating new one...');
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
@@ -161,12 +169,15 @@ export const useDashboardData = () => {
         }
         
         barbersList = [newBarber];
+        console.log('[useDashboardData] New barber created:', newBarber.id);
       } else {
         barbersList = [existingBarber];
+        console.log('[useDashboardData] Existing barber found:', existingBarber.id);
       }
       
       // If no barbers found, return early with empty stats
       if (barbersList.length === 0) {
+        console.log('[useDashboardData] No barbers found, setting empty stats');
         setStats({
           totalAppointments: 0,
           pendingAppointments: 0,
@@ -179,6 +190,7 @@ export const useDashboardData = () => {
       }
       
       const barberIds = barbersList.map(b => b.id);
+      console.log('[useDashboardData] Loading appointments for barbers:', barberIds);
       
       // Get appointments for these barbers
       const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -188,6 +200,7 @@ export const useDashboardData = () => {
         
       if (appointmentsError) throw appointmentsError;
       
+      console.log('[useDashboardData] Loading services for barbers...');
       // Get services to calculate revenue
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
@@ -209,6 +222,8 @@ export const useDashboardData = () => {
           return sum + (service?.price || 0);
         }, 0) || 0;
       
+      console.log('[useDashboardData] Stats calculated:', { totalAppointments, pendingAppointments, completedAppointments, totalRevenue });
+      
       // Set the stats
       setStats({
         totalAppointments,
@@ -220,7 +235,7 @@ export const useDashboardData = () => {
       });
 
     } catch (err: any) {
-      console.error('Error loading stats:', err);
+      console.error('[useDashboardData] Error loading stats:', err);
       setError(err.message);
     }
   }, []);
@@ -245,21 +260,34 @@ export const useDashboardData = () => {
   const refreshData = useCallback(async () => {
     if (!user?.id) return;
     
+    console.log('[useDashboardData] Starting to refresh data...');
     setLoading(true);
     setError('');
     
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      console.warn('[useDashboardData] Timeout reached, forcing loading to false');
+      setLoading(false);
+    }, 10000);
+    
     try {
       // First load the profile
+      console.log('[useDashboardData] Loading profile...');
       const loadedProfile = await loadProfile(user.id);
+      console.log('[useDashboardData] Profile loaded:', loadedProfile ? 'success' : 'failed');
       
       // Then load dashboard stats which depends on the profile
       if (loadedProfile) {
+        console.log('[useDashboardData] Loading dashboard stats...');
         await loadDashboardStats(loadedProfile);
+        console.log('[useDashboardData] Dashboard stats loaded successfully');
       }
     } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
       setError(err.message || 'Falha ao carregar os dados do painel');
     } finally {
+      clearTimeout(timeoutId);
+      console.log('[useDashboardData] Setting loading to false');
       setLoading(false);
     }
   }, [user?.id, loadProfile, loadDashboardStats]);
