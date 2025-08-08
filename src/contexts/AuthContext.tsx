@@ -30,43 +30,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let authInitialized = false;
 
     const initializeAuth = async () => {
       try {
         console.log('[AuthContext] Initializing authentication...');
         
-        // Adicionar timeout para evitar travamento
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Auth initialization timeout')), 10000);
-        });
-        
-        const sessionPromise = AuthService.getCurrentSession();
-        
-        const { data: session, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        const { data: session, error } = await AuthService.getCurrentSession();
         
         if (error) {
           console.error('[AuthContext] Error getting session:', error);
         }
         
-        if (mounted) {
+        if (mounted && !authInitialized) {
           console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Sempre definir loading como false após a inicialização
-          setLoading(false);
-          console.log('[AuthContext] Loading set to false');
+          // Definir loading como false apenas se não foi definido pelo listener
+          if (!authInitialized) {
+            setLoading(false);
+            console.log('[AuthContext] Loading set to false (initialization)');
+          }
+          authInitialized = true;
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
-        if (mounted) {
+        if (mounted && !authInitialized) {
           setLoading(false);
           console.log('[AuthContext] Loading set to false (error case)');
-        }
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
+          authInitialized = true;
         }
       }
     };
@@ -78,6 +71,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Sempre definir loading como false quando há mudança de estado
+          setLoading(false);
+          console.log('[AuthContext] Loading set to false (auth state change)');
+          authInitialized = true;
           
           // Se o usuário foi autenticado, garantir que tenha perfil
           if (session?.user && event === 'SIGNED_IN') {
@@ -91,20 +89,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Inicializar autenticação
     initializeAuth();
     
-    // Fallback: garantir que loading seja false após 15 segundos
+    // Fallback: garantir que loading seja false após 10 segundos
     const fallbackTimeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
+        authInitialized = true;
       }
-    }, 15000);
+    }, 10000);
     
     // Cleanup function
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
       clearTimeout(fallbackTimeout);
       subscription?.unsubscribe();
     };
