@@ -104,52 +104,21 @@ SELECT
 FROM information_schema.triggers 
 WHERE event_object_table = 'profiles';
 
--- 10. VERIFICAR SE HÁ ERROS NO LOG (se disponível)
--- Este comando pode não funcionar dependendo das permissões
-SELECT 
-    log_time,
-    user_name,
-    database_name,
-    process_id,
-    connection_from,
-    session_id,
-    session_line_num,
-    command_tag,
-    session_start_time,
-    virtual_transaction_id,
-    transaction_id,
-    error_severity,
-    sql_state_code,
-    message,
-    detail,
-    hint,
-    internal_query,
-    internal_query_pos,
-    context,
-    query,
-    query_pos,
-    location,
-    application_name
-FROM pg_stat_activity 
-WHERE state = 'active' 
-AND query LIKE '%profiles%';
-
--- 11. VERIFICAR CONEXÕES ATIVAS
+-- 10. VERIFICAR CONEXÕES ATIVAS (versão simplificada)
 SELECT 
     pid,
     usename,
     application_name,
     client_addr,
     backend_start,
-    state,
-    query
+    state
 FROM pg_stat_activity 
 WHERE state = 'active';
 
--- 12. TESTAR CONSULTA SIMPLES (deve funcionar mesmo sem RLS)
+-- 11. TESTAR CONSULTA SIMPLES (deve funcionar mesmo sem RLS)
 SELECT COUNT(*) as total_profiles FROM public.profiles;
 
--- 13. VERIFICAR SE O USUÁRIO TEM PERMISSÕES PARA A TABELA
+-- 12. VERIFICAR SE O USUÁRIO TEM PERMISSÕES PARA A TABELA
 SELECT 
     grantee,
     table_catalog,
@@ -161,7 +130,7 @@ FROM information_schema.table_privileges
 WHERE table_name = 'profiles' 
 AND grantee IN ('anon', 'authenticated');
 
--- 14. VERIFICAR SE EXISTEM CONSTRAINTS QUE PODEM ESTAR BLOQUEANDO
+-- 13. VERIFICAR SE EXISTEM CONSTRAINTS QUE PODEM ESTAR BLOQUEANDO
 SELECT 
     constraint_name,
     constraint_type,
@@ -172,9 +141,58 @@ JOIN information_schema.key_column_usage kcu
     ON tc.constraint_name = kcu.constraint_name
 WHERE tc.table_name = 'profiles';
 
--- 15. VERIFICAR SE HÁ ÍNDICES QUE PODEM ESTAR CAUSANDO PROBLEMAS
+-- 14. VERIFICAR SE HÁ ÍNDICES QUE PODEM ESTAR CAUSANDO PROBLEMAS
 SELECT 
     indexname,
     indexdef
 FROM pg_indexes 
 WHERE tablename = 'profiles';
+
+-- 15. VERIFICAR SE EXISTEM FUNÇÕES RELACIONADAS
+SELECT 
+    routine_name,
+    routine_type,
+    data_type
+FROM information_schema.routines 
+WHERE routine_schema = 'public' 
+AND routine_name LIKE '%profile%' OR routine_name LIKE '%user%';
+
+-- 16. VERIFICAR SE EXISTEM VIEWS RELACIONADAS
+SELECT 
+    table_name,
+    table_type
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%profile%' OR table_name LIKE '%user%';
+
+-- 17. TESTAR CONSULTA COM JOIN (para verificar relacionamentos)
+SELECT 
+    p.id as profile_id,
+    p.name as profile_name,
+    b.id as barber_id,
+    b.specialty,
+    b.is_active
+FROM public.profiles p
+LEFT JOIN public.barbers b ON p.id = b.profile_id
+WHERE p.id = 'df523100-5904-4aec-a187-860fc46d9a48';
+
+-- 18. VERIFICAR SE EXISTEM DADOS DE TESTE
+SELECT 
+    'profiles' as table_name,
+    COUNT(*) as total_records
+FROM public.profiles
+UNION ALL
+SELECT 
+    'barbers' as table_name,
+    COUNT(*) as total_records
+FROM public.barbers
+UNION ALL
+SELECT 
+    'appointments' as table_name,
+    COUNT(*) as total_records
+FROM public.appointments
+UNION ALL
+SELECT 
+    'services' as table_name,
+    COUNT(*) as total_records
+FROM public.services;
