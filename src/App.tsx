@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 // import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import { AuthCallback } from "./pages/AuthCallback";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -12,6 +13,8 @@ import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from './pages/AdminDashboard';
+import BarberDashboard from './pages/BarberDashboard';
+import './lib/i18n'; // Importar configuração do i18next
 
 // const queryClient = new QueryClient();
 
@@ -75,6 +78,14 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
+        path="/barber-dashboard" 
+        element={
+          <ProtectedRoute>
+            <BarberDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/" 
         element={<Navigate to="/auth" replace />}
       />
@@ -85,15 +96,17 @@ const AppRoutes: React.FC = () => {
 
 const App = () => (
   // <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ErrorBoundary>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ErrorBoundary>
   // </QueryClientProvider>
 );
 

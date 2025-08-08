@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
+import { AuthService, LoginCredentials, RegisterCredentials } from '../services/authService';
 import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         console.log('[AuthContext] Getting current session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: session, error } = await AuthService.getCurrentSession();
         
         if (error) {
           console.error('[AuthContext] Error getting session:', error);
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Configurar listener para mudanças de estado
     console.log('[AuthContext] Setting up auth state change listener');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
         console.log('[AuthContext] Auth state changed:', { 
           event, 
@@ -119,29 +119,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('[AuthContext] Logging in with email:', email);
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      
+      const credentials: LoginCredentials = { email, password };
+      const { data: user, error } = await AuthService.login(credentials);
       
       console.log('[AuthContext] Login response:', { 
-        hasUser: !!data?.user,
-        error: error?.message 
+        hasUser: !!user,
+        error: error 
       });
 
       if (error) {
         console.error('Login error:', error);
         toast({
           title: "Erro no login",
-          description: error.message,
+          description: error,
           variant: "destructive",
         });
         return false;
       }
 
-      if (data.user) {
+      if (user) {
         // Verificar se o usuário tem perfil, se não tiver, criar um
-        await ensureUserProfile(data.user);
+        await ensureUserProfile(user);
         
         toast({
           title: "Login realizado com sucesso!",
@@ -211,25 +210,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            name,
-            phone,
-          }
-        }
-      });
+      const credentials: RegisterCredentials = { name, email, phone, password };
+      const { data: user, error } = await AuthService.register(credentials);
   
       if (error) {
         console.error('Register error:', error);
         toast({
           title: "Erro no cadastro",
-          description: error.message,
+          description: error,
           variant: "destructive",
         });
         return false;
@@ -238,10 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // O perfil será criado automaticamente pelo trigger no banco de dados
       // Então não precisamos fazer nada aqui
   
-      if (data.user) {
+      if (user) {
         toast({
           title: "Conta criada com sucesso!",
-          description: data.user.email_confirmed_at 
+          description: user.email_confirmed_at 
             ? "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora."
             : "Verifique seu email para confirmar a conta.",
         });
@@ -266,8 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // Usar o signOut do Supabase que já limpa tudo corretamente
-      const { error } = await supabase.auth.signOut();
+      const { error } = await AuthService.logout();
       
       if (error) {
         console.error('Logout error:', error);
@@ -306,34 +294,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      // Verificar status da assinatura no banco
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('subscription_status, subscription_end_date')
-        .eq('id', user.id)
-        .single();
-
+      const { data: trialExpired, error } = await AuthService.isTrialExpired(user.id);
+      
       if (error) {
-        console.error('Error checking subscription status:', error);
+        console.error('Error checking trial expiration:', error);
         // Fallback para verificação antiga
         return checkTrialByDate();
       }
 
-      // Se tem assinatura ativa, não expirou
-      if (profile?.subscription_status === 'active') {
-        return false;
-      }
-
-      // Se tem assinatura cancelada ou expirada, verificar se ainda está no período
-      if (profile?.subscription_end_date) {
-        const endDate = new Date(profile.subscription_end_date);
-        if (endDate > new Date()) {
-          return false; // Ainda válida
-        }
-      }
-
-      // Fallback para verificação por data de criação
-      return checkTrialByDate();
+      return trialExpired;
     } catch (error) {
       console.error('Error checking trial expiration:', error);
       return checkTrialByDate();

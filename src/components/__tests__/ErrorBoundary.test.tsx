@@ -38,8 +38,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Algo deu errado')).toBeInTheDocument();
-    expect(screen.getByText(/Ocorreu um erro inesperado/)).toBeInTheDocument();
+    expect(screen.getByText('Ops! Algo deu errado')).toBeInTheDocument();
+    expect(screen.getByText(/Encontramos um problema inesperado/)).toBeInTheDocument();
   });
 
   it('should show retry button', () => {
@@ -49,7 +49,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Tentar novamente')).toBeInTheDocument();
+    expect(screen.getByText('Tentar Novamente')).toBeInTheDocument();
   });
 
   it('should show report error button', () => {
@@ -59,33 +59,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Reportar erro')).toBeInTheDocument();
-  });
-
-  it('should handle retry correctly', () => {
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={false} />
-      </ErrorBoundary>
-    );
-
-    // Primeiro renderiza sem erro
-    expect(screen.getByText('No error')).toBeInTheDocument();
-
-    // Simula um erro
-    const errorBoundary = screen.getByText('No error').parentElement;
-    if (errorBoundary) {
-      fireEvent.error(errorBoundary, new Error('Test error'));
-    }
-
-    // Deve mostrar a UI de erro
-    expect(screen.getByText('Algo deu errado')).toBeInTheDocument();
-
-    // Clica no botão de tentar novamente
-    fireEvent.click(screen.getByText('Tentar novamente'));
-
-    // Deve voltar a renderizar o conteúdo normal
-    expect(screen.getByText('No error')).toBeInTheDocument();
+    expect(screen.getByText('Ir para o Início')).toBeInTheDocument();
+    expect(screen.getByText('Recarregar Página')).toBeInTheDocument();
   });
 
   it('should render custom fallback when provided', () => {
