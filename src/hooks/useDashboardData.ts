@@ -311,9 +311,17 @@ export const useDashboardData = () => {
 
   // Initialize data when user changes
   useEffect(() => {
+    let mounted = true;
+    
     if (user?.id) {
-      refreshData();
+      console.log('[useDashboardData] User changed, refreshing data...');
+      refreshData().finally(() => {
+        if (mounted) {
+          console.log('[useDashboardData] Data refresh completed');
+        }
+      });
     } else {
+      console.log('[useDashboardData] No user, resetting state...');
       // Reset state when user is not available
       setProfile(null);
       setStats({
@@ -325,6 +333,11 @@ export const useDashboardData = () => {
       setDaysRemaining(0);
       isInitialized.current = false;
     }
+    
+    return () => {
+      mounted = false;
+      console.log('[useDashboardData] Component unmounted, cleanup completed');
+    };
   }, [user?.id, refreshData]);
 
   // Calculate trial days when profile changes
