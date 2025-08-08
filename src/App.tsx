@@ -9,6 +9,11 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import { AuthCallback } from "./pages/AuthCallback";
 import { DashboardPage } from "./pages/DashboardPage";
+import { AppointmentsPage } from "./pages/AppointmentsPage";
+import { ServicesPage } from "./pages/ServicesPage";
+import { ClientsPage } from "./pages/ClientsPage";
+import { FinancePage } from "./pages/FinancePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { BookingPage } from "./components/booking/BookingPage";
 import { Booking } from "./pages/Booking";
 import NotFound from "./pages/NotFound";
@@ -58,6 +63,54 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/appointments" 
+        element={
+          <ProtectedRoute>
+            <AppointmentsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/services" 
+        element={
+          <ProtectedRoute>
+            <ServicesPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/clients" 
+        element={
+          <ProtectedRoute>
+            <ClientsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/finance" 
+        element={
+          <ProtectedRoute>
+            <FinancePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/settings" 
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/appointments" 
+        element={
+          <ProtectedRoute>
+            <AppointmentsPage />
           </ProtectedRoute>
         } 
       />
