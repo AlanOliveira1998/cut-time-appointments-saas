@@ -1,0 +1,10 @@
+#!/usr/bin/env pwsh
+# Husky post-commit hook for Windows PowerShell
+# This script runs after each commit
+
+# Get the directory where this script is located
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# You can add post-commit actions here if needed
+# For example: notifications, deployment triggers, etc.
+Write-Host "✅ Commit completed successfully!" -ForegroundColor Green

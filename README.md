@@ -1,171 +1,132 @@
-# 🪒 BarberTime - Sistema de Agendamento para Barbearias
+# BarberTime - Sistema de Agendamento para Barbearias
 
-Um sistema SaaS completo para gerenciamento de agendamentos em barbearias, construído com React, TypeScript e Supabase.
+Sistema SaaS completo para gerenciamento de agendamentos em barbearias, com dashboard administrativo, sistema de usuários e agendamentos.
 
-## ✨ Funcionalidades
+## 🚀 Funcionalidades
 
-### 🎯 Para Clientes
-- **Agendamento Online**: Interface intuitiva para agendar horários
-- **Seleção de Barbeiros**: Escolha entre diferentes profissionais
-- **Serviços Personalizados**: Visualize preços e durações
-- **Confirmação por Email**: Receba confirmações automáticas
-- **Histórico de Agendamentos**: Acompanhe seus agendamentos
+- **Sistema de Autenticação**: Login/registro com Supabase
+- **Dashboard Administrativo**: Gestão completa de barbearias e usuários
+- **Sistema de Agendamentos**: Interface intuitiva para clientes
+- **Gestão de Serviços**: CRUD completo de serviços oferecidos
+- **Relatórios e Analytics**: Dashboard com métricas importantes
+- **Interface Responsiva**: Design moderno com Tailwind CSS
 
-### 🏪 Para Barbeiros
-- **Dashboard Completo**: Gerenciamento centralizado
-- **Gestão de Serviços**: Adicione e edite serviços
-- **Horários de Trabalho**: Configure disponibilidade
-- **Lista de Agendamentos**: Visualize agenda diária
-- **Gestão de Funcionários**: Adicione barbeiros à equipe
-
-### 🔧 Recursos Técnicos
-- **Autenticação Segura**: Supabase Auth com RLS
-- **Interface Responsiva**: Funciona em desktop e mobile
-- **Validação Robusta**: Formulários com validação em tempo real
-- **Performance Otimizada**: Lazy loading e memoização
-- **Acessibilidade**: Suporte a leitores de tela
-
-## 🚀 Tecnologias
+## 🛠️ Tecnologias
 
 - **Frontend**: React 18 + TypeScript + Vite
-- **UI**: Tailwind CSS + shadcn/ui + Radix UI
-- **Backend**: Supabase (PostgreSQL + Auth + RLS)
+- **Styling**: Tailwind CSS + Radix UI
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **Estado**: React Context + Custom Hooks
 - **Formulários**: React Hook Form + Zod
-- **Roteamento**: React Router DOM
-- **Estado**: React Query + Context API
-- **Deploy**: Vercel/Netlify (compatível)
+- **Testes**: Vitest + React Testing Library
+- **Documentação**: Storybook
+- **Internacionalização**: i18next
 
-## 📦 Instalação
+## 📋 Pré-requisitos
 
-### Pré-requisitos
-- Node.js 18+ 
-- npm 8+ ou yarn
+- Node.js 18+
+- npm 8+
 - Conta no Supabase
 
-### 1. Clone o repositório
-```bash
-git clone https://github.com/seu-usuario/barbertime-appointments-saas.git
-cd barbertime-appointments-saas
-```
+## 🚀 Instalação
 
-### 2. Instale as dependências
-```bash
-npm install
-```
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/seu-usuario/barbertime-appointments-saas.git
+   cd barbertime-appointments-saas
+   ```
 
-### 3. Configure as variáveis de ambiente
-Crie um arquivo `.env.local` na raiz do projeto:
-```env
-VITE_SUPABASE_URL=sua_url_do_supabase
-VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-```
+2. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
 
-### 4. Configure o Supabase
-1. Crie um projeto no [Supabase](https://supabase.com)
-2. Execute as migrations na pasta `supabase/migrations/`
-3. Configure as políticas RLS conforme necessário
+3. **Configure as variáveis de ambiente:**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Edite o arquivo `.env.local` com suas credenciais do Supabase:
+   ```env
+   VITE_SUPABASE_URL=sua_url_do_supabase
+   VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+   ```
 
-### 5. Execute o projeto
-```bash
-npm run dev
-```
+4. **Configure o banco de dados:**
+   ```bash
+   npx supabase db push
+   ```
 
-O projeto estará disponível em `http://localhost:8080`
+5. **Execute o projeto:**
+   ```bash
+   npm run dev
+   ```
 
-## 🗂️ Estrutura do Projeto
+## 📚 Scripts Disponíveis
+
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Build para produção
+- `npm run preview` - Preview do build de produção
+- `npm run test` - Executa os testes
+- `npm run lint` - Verifica o código com ESLint
+- `npm run format` - Formata o código com Prettier
+- `npm run storybook` - Inicia o Storybook
+
+## 🏗️ Estrutura do Projeto
 
 ```
 src/
-├── components/          # Componentes React
+├── components/          # Componentes React reutilizáveis
+│   ├── admin/          # Componentes administrativos
 │   ├── auth/           # Componentes de autenticação
 │   ├── booking/        # Componentes de agendamento
-│   ├── dashboard/      # Componentes do dashboard
-│   └── ui/             # Componentes de UI reutilizáveis
-├── contexts/           # Contextos React (Auth, etc.)
-├── hooks/              # Hooks customizados
-├── integrations/       # Integrações externas (Supabase)
-├── lib/                # Utilitários e configurações
-├── pages/              # Páginas da aplicação
-├── types/              # Definições de tipos TypeScript
-└── utils/              # Funções utilitárias
+│   └── ui/             # Componentes de interface
+├── contexts/            # Contextos React (Auth, etc.)
+├── hooks/               # Hooks customizados
+├── lib/                 # Utilitários e configurações
+├── pages/               # Páginas da aplicação
+├── services/            # Serviços para comunicação com APIs
+└── types/               # Definições de tipos TypeScript
 ```
 
-## 🔧 Scripts Disponíveis
+## 🔧 Configuração do Supabase
+
+1. Crie um projeto no [Supabase](https://supabase.com)
+2. Configure as tabelas necessárias (veja `supabase/migrations/`)
+3. Configure as políticas de segurança (RLS)
+4. Adicione as credenciais no arquivo `.env.local`
+
+## 🧪 Testes
+
+O projeto inclui testes unitários abrangentes:
 
 ```bash
-# Desenvolvimento
-npm run dev              # Inicia servidor de desenvolvimento
-npm run build            # Build para produção
-npm run preview          # Preview do build
+# Executar todos os testes
+npm run test
 
-# Qualidade de Código
-npm run lint             # Executa ESLint
-npm run lint:fix         # Corrige problemas do ESLint
-npm run format           # Formata código com Prettier
-npm run type-check       # Verifica tipos TypeScript
+# Executar testes com UI
+npm run test:ui
 
-# Testes
-npm run test             # Executa testes
-npm run test:ui          # Interface visual para testes
-npm run test:coverage    # Relatório de cobertura
-
-# Utilitários
-npm run list-structure   # Lista estrutura do projeto
+# Verificar cobertura
+npm run test:coverage
 ```
 
-## 🛠️ Configuração do Supabase
+## 📖 Storybook
 
-### 1. Tabelas Principais
-- `profiles`: Perfis de usuários
-- `barbers`: Barbeiros e funcionários
-- `services`: Serviços oferecidos
-- `working_hours`: Horários de funcionamento
-- `appointments`: Agendamentos
+Para visualizar e testar componentes isoladamente:
 
-### 2. Políticas RLS
-O projeto inclui políticas de segurança configuradas:
-- Usuários autenticados podem gerenciar seus próprios dados
-- Agendamentos públicos podem ser criados por qualquer pessoa
-- Barbeiros podem gerenciar seus serviços e horários
-
-### 3. Funções de Banco
-- `handle_new_user()`: Cria perfil automaticamente
-- `is_barber_owner()`: Verifica se usuário é owner
-- `can_create_barber()`: Valida criação de barbeiros
-
-## 🎨 Personalização
-
-### Cores e Tema
-As cores podem ser personalizadas no arquivo `src/index.css`:
-```css
-:root {
-  --primary: 200 100% 20%; /* Azul petróleo */
-  --accent: 80 85% 55%;    /* Verde limão */
-  /* ... outras variáveis */
-}
-```
-
-### Componentes
-Os componentes usam shadcn/ui e podem ser personalizados:
 ```bash
-npx shadcn@latest add [component-name]
+npm run storybook
 ```
 
-## 📱 Responsividade
+## 🌐 Internacionalização
 
-O projeto é totalmente responsivo e funciona em:
-- 📱 Mobile (320px+)
-- 📱 Tablet (768px+)
-- 💻 Desktop (1024px+)
-- 🖥️ Large Desktop (1440px+)
+O projeto suporta português e inglês usando i18next:
 
-## 🔒 Segurança
-
-- **Autenticação**: Supabase Auth com JWT
-- **Autorização**: Row Level Security (RLS)
-- **Validação**: Zod schemas em todos os formulários
-- **Sanitização**: Input sanitization
-- **Rate Limiting**: Proteção contra spam
+```bash
+# Adicionar novo idioma
+# Edite src/lib/i18n.ts e adicione as traduções
+```
 
 ## 🚀 Deploy
 
@@ -174,15 +135,12 @@ O projeto é totalmente responsivo e funciona em:
 2. Configure as variáveis de ambiente
 3. Deploy automático a cada push
 
-### Netlify
-1. Conecte seu repositório ao Netlify
-2. Configure build command: `npm run build`
-3. Configure publish directory: `dist`
+### Outras plataformas
+- Netlify
+- Railway
+- Heroku
 
-### Outros
-O projeto é compatível com qualquer plataforma que suporte aplicações React estáticas.
-
-## 🤝 Contribuindo
+## 🤝 Contribuição
 
 1. Fork o projeto
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
@@ -194,19 +152,16 @@ O projeto é compatível com qualquer plataforma que suporte aplicações React 
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## 🆘 Suporte
+## 📞 Suporte
 
-- 📧 Email: suporte@barbertime.com
-- 💬 Discord: [BarberTime Community](https://discord.gg/barbertime)
-- 📖 Documentação: [docs.barbertime.com](https://docs.barbertime.com)
-
-## 🙏 Agradecimentos
-
-- [Supabase](https://supabase.com) pela infraestrutura
-- [shadcn/ui](https://ui.shadcn.com) pelos componentes
-- [Vercel](https://vercel.com) pela hospedagem
-- Comunidade React/TypeScript
+- **Issues**: [GitHub Issues](https://github.com/seu-usuario/barbertime-appointments-saas/issues)
+- **Email**: suporte@barbertime.com
+- **Documentação**: [Wiki do Projeto](https://github.com/seu-usuario/barbertime-appointments-saas/wiki)
 
 ---
 
-**BarberTime** - Transformando a gestão de barbearias 🪒✨
+**Desenvolvido com ❤️ pela equipe BarberTime**
+
+## 🧪 Teste do Husky com PowerShell
+
+Esta linha foi adicionada para testar se o hook do Husky está funcionando corretamente com PowerShell no Windows.

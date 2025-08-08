@@ -1,4 +1,9 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/usr/bin/env pwsh
+# Husky pre-commit hook for Windows PowerShell
+# This script runs lint-staged before each commit
 
+# Get the directory where this script is located
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Run lint-staged
 npx lint-staged 
