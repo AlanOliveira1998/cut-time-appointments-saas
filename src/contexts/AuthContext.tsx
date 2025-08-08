@@ -30,28 +30,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
-        const { data: session, error } = await AuthService.getCurrentSession();
+        console.log('[AuthContext] Initializing authentication...');
+        
+        // Adicionar timeout para evitar travamento
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Auth initialization timeout')), 10000);
+        });
+        
+        const sessionPromise = AuthService.getCurrentSession();
+        
+        const { data: session, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (error) {
           console.error('[AuthContext] Error getting session:', error);
         }
         
         if (mounted) {
+          console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Se não há sessão, definir loading como false imediatamente
-          if (!session) {
-            setLoading(false);
-          }
+          // Sempre definir loading como false após a inicialização
+          setLoading(false);
+          console.log('[AuthContext] Loading set to false');
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
         if (mounted) {
           setLoading(false);
+          console.log('[AuthContext] Loading set to false (error case)');
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
       }
     };
@@ -59,27 +74,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Configurar listener para mudanças de estado
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
+        console.log('[AuthContext] Auth state change:', event, session ? 'User present' : 'No user');
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
           
           // Se o usuário foi autenticado, garantir que tenha perfil
           if (session?.user && event === 'SIGNED_IN') {
+            console.log('[AuthContext] User signed in, ensuring profile...');
             await ensureUserProfile(session.user);
           }
-          
-          // Sempre definir loading como false após processar a mudança de estado
-          setLoading(false);
         }
       }
     );
 
     // Inicializar autenticação
     initializeAuth();
-
+    
+    // Fallback: garantir que loading seja false após 15 segundos
+    const fallbackTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[AuthContext] Fallback: forcing loading to false');
+        setLoading(false);
+      }
+    }, 15000);
+    
     // Cleanup function
     return () => {
       mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      clearTimeout(fallbackTimeout);
       subscription?.unsubscribe();
     };
   }, []);
