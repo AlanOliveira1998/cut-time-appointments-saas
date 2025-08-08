@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+#!/usr/bin/env powershell.exe
 # Husky pre-commit hook for Windows PowerShell
 # This script runs lint-staged before each commit
 

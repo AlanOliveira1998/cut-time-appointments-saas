@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+#!/usr/bin/env powershell.exe
 # Husky post-commit hook for Windows PowerShell
 # This script runs after each commit
 
