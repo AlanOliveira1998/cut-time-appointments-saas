@@ -376,6 +376,15 @@ export const useDashboardData = () => {
   const calculateTrialDays = useCallback(() => {
     if (!profile || !isMounted()) return;
 
+    // Exceção para o usuário alan.pires.oliveira@gmail.com - nunca expira
+    if (user?.email === 'alan.pires.oliveira@gmail.com') {
+      console.log('[useDashboardData] User alan.pires.oliveira@gmail.com detected - trial never expires');
+      if (isMounted()) {
+        setDaysRemaining(999); // Número alto para indicar que nunca expira
+      }
+      return;
+    }
+
     const startDate = profile.subscription_start_date 
       ? new Date(profile.subscription_start_date) 
       : new Date();
@@ -390,7 +399,7 @@ export const useDashboardData = () => {
     if (isMounted()) {
       setDaysRemaining(Math.max(0, diffDays));
     }
-  }, [profile, isMounted]);
+  }, [profile, isMounted, user?.email]);
 
   // Função principal para atualizar dados
   const refreshData = useCallback(async () => {

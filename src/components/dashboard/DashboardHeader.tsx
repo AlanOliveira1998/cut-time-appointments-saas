@@ -56,7 +56,8 @@ export const DashboardHeader = ({
 
       <div className="relative ml-auto flex-1 md:grow-0">
         <div className="flex items-center justify-end gap-4">
-          {daysRemaining <= 3 && daysRemaining > 0 && (
+          {/* Não mostrar aviso de dias restantes para alan.pires.oliveira@gmail.com */}
+          {daysRemaining <= 3 && daysRemaining > 0 && daysRemaining !== 999 && user?.email !== 'alan.pires.oliveira@gmail.com' && (
             <Badge variant="warning" className="hidden sm:flex">
               {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'} restantes no período de teste
             </Badge>

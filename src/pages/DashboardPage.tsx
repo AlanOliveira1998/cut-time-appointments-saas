@@ -126,8 +126,8 @@ export const DashboardPage = () => {
     );
   }
 
-  // Se o trial tiver expirado, mostrar mensagem
-  if (isTrialExpired) {
+  // Se o trial tiver expirado, mostrar mensagem (exceto para alan.pires.oliveira@gmail.com)
+  if (isTrialExpired && user?.email !== 'alan.pires.oliveira@gmail.com') {
     return (
       <div className="flex h-screen flex-col items-center justify-center p-4 text-center">
         <div className="max-w-md space-y-4">

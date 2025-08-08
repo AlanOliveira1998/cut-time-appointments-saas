@@ -37,7 +37,18 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_created TIMESTAMP WITH TIME ZONE;
   subscription_status TEXT;
+  user_email TEXT;
 BEGIN
+  -- Pegar email do usuário
+  SELECT email INTO user_email
+  FROM auth.users
+  WHERE id = user_id;
+  
+  -- Exceção para o usuário alan.pires.oliveira@gmail.com - nunca expira
+  IF user_email = 'alan.pires.oliveira@gmail.com' THEN
+    RETURN FALSE;
+  END IF;
+  
   -- Pegar data de criação do usuário
   SELECT created_at INTO user_created
   FROM auth.users
