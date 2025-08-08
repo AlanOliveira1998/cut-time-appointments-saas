@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 
@@ -55,7 +55,7 @@ const INIT_STATS: StatsNumbers = {
 
 export const useDashboardData = () => {
   const { user } = useAuth();
-  console.log('[useDashboardData] Initializing with user:', user?.id || 'no user');
+  const isInitialized = useRef(false);
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<StatsWithAppointments>({
@@ -65,19 +65,15 @@ export const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [daysRemaining, setDaysRemaining] = useState(0);
-  
-  console.log('[useDashboardData] Initial state:', { loading, error, hasUser: !!user });
 
-  const createProfile = useCallback(async (userId: string) => {
+  const createProfile = useCallback(async (userId: string, userMetadata: any) => {
     try {
-      console.log('[useDashboardData] Creating profile for user:', userId);
-      
       const { data, error: createError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
-          name: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Novo Usuário',
-          phone: user?.user_metadata?.phone || '',
+          name: userMetadata?.name || userMetadata?.full_name || 'Novo Usuário',
+          phone: userMetadata?.phone || '',
           subscription_status: 'trial',
           subscription_start_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
@@ -87,130 +83,90 @@ export const useDashboardData = () => {
         .single();
 
       if (createError) {
-        console.error('[useDashboardData] Error creating profile:', createError);
         throw createError;
       }
 
-      console.log('[useDashboardData] Profile created successfully:', data?.id);
       return data;
     } catch (err) {
       console.error('[useDashboardData] Error in createProfile:', err);
       throw err;
     }
-  }, [user]);
+  }, []);
 
-  const loadProfile = useCallback(async () => {
+  const loadProfile = useCallback(async (userId: string) => {
     try {
-      console.log('[useDashboardData] Loading profile for user:', user?.id || 'no user');
-      
-      if (!user) {
-        console.log('[useDashboardData] No user found, skipping profile load');
+      if (!userId) {
         return null;
       }
 
-      // Pular teste de conectividade por enquanto - ir direto para a consulta principal
-      console.log('[useDashboardData] Skipping connectivity test, going directly to profile query...');
+      // Primeiro tentar consultar o perfil existente
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      console.log('[useDashboardData] Attempting to query existing profile first...');
-      
-      try {
-        // Primeiro tentar consultar o perfil existente
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError && profileError.code === 'PGRST116') {
-          // Perfil não existe, criar um
-          console.log('[useDashboardData] Profile not found, creating new profile...');
-          const newProfile = await createProfile(user.id);
-          console.log('[useDashboardData] Profile created successfully:', newProfile?.id);
-          setProfile(newProfile);
-          return newProfile;
-        } else if (profileError) {
-          console.error('[useDashboardData] Error loading profile:', profileError);
-          throw profileError;
-        }
-        
-        console.log('[useDashboardData] Profile loaded successfully:', data?.id);
-        setProfile(data);
-        return data;
-      } catch (error) {
-        console.error('[useDashboardData] Error in profile query/creation:', error);
-        throw error;
+      if (profileError && profileError.code === 'PGRST116') {
+        // Perfil não existe, criar um
+        const newProfile = await createProfile(userId, user?.user_metadata);
+        setProfile(newProfile);
+        return newProfile;
+      } else if (profileError) {
+        throw profileError;
       }
+      
+      setProfile(data);
+      return data;
     } catch (err) {
       console.error('[useDashboardData] Error loading profile:', err);
       setError('Falha ao carregar perfil');
       return null;
     }
-  }, [user, createProfile]);
+  }, [user?.user_metadata, createProfile]);
 
-  const loadDashboardStats = useCallback(async (userProfile?: Profile) => {
-    if (!user) {
-      console.log('[useDashboardData] No user found, skipping stats load');
+  const loadDashboardStats = useCallback(async (userProfile: Profile) => {
+    if (!userProfile) {
       return;
     }
 
     try {
-      console.log('[useDashboardData] Loading dashboard stats for user:', user.id);
-      
-      // First get the barbers
-      let barbersList: { id: string }[] = [];
-      
-      // Use the provided profile or the current profile state
-      const currentProfile = userProfile || profile;
-      
-      // First ensure we have a profile
-      if (!currentProfile) {
-        console.log('[useDashboardData] No profile available, skipping stats load');
-        return;
-      }
-      
       // Check if a barber with this profile already exists
       const { data: existingBarber, error: barberCheckError } = await supabase
         .from('barbers')
         .select('id')
-        .eq('profile_id', currentProfile.id)
+        .eq('profile_id', userProfile.id)
         .maybeSingle();
         
       if (barberCheckError) {
-        console.error('[useDashboardData] Error checking for existing barber:', barberCheckError);
         throw barberCheckError;
       }
       
+      let barbersList: { id: string }[] = [];
+      
       // If no barber exists for this profile, create one
       if (!existingBarber) {
-        console.log('[useDashboardData] No barber found for profile, creating default barber');
-        
         const { data: newBarber, error: createBarberError } = await supabase
           .from('barbers')
           .insert([{
-            profile_id: currentProfile.id,  // Reference the user's profile
+            profile_id: userProfile.id,
             is_active: true,
             specialty: 'Corte de Cabelo',
             experience_years: 1
-            // created_at and updated_at are automatically set by the database
           }])
           .select('id')
           .single();
           
         if (createBarberError || !newBarber) {
-          console.error('[useDashboardData] Error creating default barber:', createBarberError);
           throw new Error('Não foi possível configurar sua barbearia. Por favor, tente novamente.');
         }
         
-        // Use the newly created barber
         barbersList = [newBarber];
-      } else if (existingBarber) {
-        // Use the existing barber
+      } else {
         barbersList = [existingBarber];
       }
       
       // If no barbers found, return early with empty stats
       if (barbersList.length === 0) {
-        console.log('[useDashboardData] No barbers found, returning empty stats');
         setStats({
           totalAppointments: 0,
           pendingAppointments: 0,
@@ -259,15 +215,15 @@ export const useDashboardData = () => {
         pendingAppointments,
         completedAppointments,
         totalRevenue,
-        averageServiceTime: '30 min', // Default value, can be calculated if needed
-        recentAppointments: (appointmentsData || []).slice(0, 5) // Get 5 most recent appointments
+        averageServiceTime: '30 min',
+        recentAppointments: (appointmentsData || []).slice(0, 5)
       });
 
     } catch (err: any) {
       console.error('Error loading stats:', err);
       setError(err.message);
     }
-  }, [user, profile]);
+  }, []);
 
   const calculateTrialDays = useCallback(() => {
     if (!profile) return;
@@ -287,50 +243,41 @@ export const useDashboardData = () => {
   }, [profile]);
 
   const refreshData = useCallback(async () => {
-    console.log('[useDashboardData] Starting refreshData...');
+    if (!user?.id) return;
+    
     setLoading(true);
     setError('');
     
     try {
       // First load the profile
-      console.log('[useDashboardData] Loading profile...');
-      const loadedProfile = await loadProfile();
-      console.log('[useDashboardData] Profile loaded:', loadedProfile?.id || 'null');
+      const loadedProfile = await loadProfile(user.id);
       
       // Then load dashboard stats which depends on the profile
       if (loadedProfile) {
-        console.log('[useDashboardData] Loading dashboard stats...');
         await loadDashboardStats(loadedProfile);
-        console.log('[useDashboardData] Dashboard stats loaded successfully');
-      } else {
-        console.log('[useDashboardData] No profile loaded, skipping stats');
       }
     } catch (err: any) {
       console.error('[useDashboardData] Error refreshing data:', err);
       setError(err.message || 'Falha ao carregar os dados do painel');
     } finally {
-      console.log('[useDashboardData] Setting loading to false');
       setLoading(false);
     }
-  }, [loadProfile, loadDashboardStats]);
+  }, [user?.id, loadProfile, loadDashboardStats]);
 
+  // Initialize data only once when user changes
   useEffect(() => {
-    console.log('[useDashboardData] useEffect triggered:', { 
-      hasUser: !!user, 
-      userId: user?.id 
-    });
-    
-    if (user) {
-      console.log('[useDashboardData] Calling refreshData...');
+    if (user?.id && !isInitialized.current) {
+      isInitialized.current = true;
       refreshData();
-    } else {
-      console.log('[useDashboardData] No user, skipping refreshData');
     }
-  }, [user, refreshData]);
+  }, [user?.id, refreshData]);
 
+  // Calculate trial days when profile changes
   useEffect(() => {
-    calculateTrialDays();
-  }, [calculateTrialDays]);
+    if (profile) {
+      calculateTrialDays();
+    }
+  }, [profile, calculateTrialDays]);
 
   return {
     profile,
