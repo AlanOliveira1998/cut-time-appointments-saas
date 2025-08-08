@@ -53,11 +53,21 @@ const INIT_STATS: StatsNumbers = {
   averageServiceTime: '0 min'
 };
 
+// Timeout configuration
+const TIMEOUT_MS = 10000; // 10 seconds
+const DEBOUNCE_MS = 300; // 300ms
+
 export const useDashboardData = () => {
   const { user } = useAuth();
-  const isInitialized = useRef(false);
-  const mountedRef = useRef(true);
+  
+  // Refs para controle de estado mutável
+  const isMountedRef = useRef(true);
+  const loadingRef = useRef(false);
+  const isInitializedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<StatsWithAppointments>({
@@ -68,7 +78,39 @@ export const useDashboardData = () => {
   const [error, setError] = useState('');
   const [daysRemaining, setDaysRemaining] = useState(0);
 
-  const createProfile = useCallback(async (userId: string, userMetadata: any) => {
+  // Função para verificar se componente está montado
+  const isMounted = useCallback(() => isMountedRef.current, []);
+
+  // Função para limpar recursos
+  const cleanup = useCallback(() => {
+    console.log('[useDashboardData] Cleaning up resources...');
+    
+    // Limpar debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+    
+    // Limpar timeout geral
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Abortar operações pendentes
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  // Função para criar perfil com timeout
+  const createProfile = useCallback(async (userId: string, userMetadata: any): Promise<Profile | null> => {
+    if (!isMounted()) {
+      console.log('[useDashboardData] Component unmounted, skipping profile creation');
+      return null;
+    }
+
     try {
       console.log('[useDashboardData] Creating profile...');
       
@@ -97,29 +139,46 @@ export const useDashboardData = () => {
       console.error('[useDashboardData] Error in createProfile:', err);
       throw err;
     }
-  }, []);
+  }, [isMounted]);
 
-  const loadProfile = useCallback(async (userId: string) => {
+  // Função para carregar perfil com timeout
+  const loadProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    if (!isMounted() || !userId) {
+      console.log('[useDashboardData] No userId provided or component unmounted');
+      return null;
+    }
+
     try {
-      if (!userId) {
-        console.log('[useDashboardData] No userId provided');
-        return null;
-      }
-
       console.log('[useDashboardData] Checking for existing profile for user:', userId);
       
-      // Simple query without timeout - let Supabase handle it
-      const { data, error: profileError } = await supabase
+      // Criar timeout para a operação
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutRef.current = setTimeout(() => {
+          reject(new Error('Profile query timeout'));
+        }, TIMEOUT_MS);
+      });
+
+      // Query principal
+      const queryPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      // Race entre query e timeout
+      const { data, error: profileError } = await Promise.race([queryPromise, timeoutPromise]);
+
+      // Limpar timeout se ainda não foi executado
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       if (profileError && profileError.code === 'PGRST116') {
         // Perfil não existe, criar um
         console.log('[useDashboardData] Profile not found, creating new one...');
         const newProfile = await createProfile(userId, user?.user_metadata);
-        if (newProfile) {
+        if (newProfile && isMounted()) {
           setProfile(newProfile);
           console.log('[useDashboardData] New profile created successfully');
         } else {
@@ -131,30 +190,66 @@ export const useDashboardData = () => {
         // Se for outro erro, tentar criar o perfil mesmo assim
         console.log('[useDashboardData] Trying to create profile due to error...');
         const newProfile = await createProfile(userId, user?.user_metadata);
-        if (newProfile) {
+        if (newProfile && isMounted()) {
           setProfile(newProfile);
         }
         return newProfile;
       }
       
       console.log('[useDashboardData] Existing profile found');
-      setProfile(data);
+      if (isMounted()) {
+        setProfile(data);
+      }
       return data;
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[useDashboardData] Profile load aborted');
+        return null;
+      }
       console.error('[useDashboardData] Error loading profile:', err);
-      // Não definir erro aqui, apenas log
       return null;
     }
-  }, [user?.user_metadata, createProfile]);
+  }, [user?.user_metadata, createProfile, isMounted]);
 
+  // Função para calcular estatísticas
+  const calculateStats = useCallback((appointmentsData: any[], servicesData: any[]) => {
+    const totalAppointments = appointmentsData?.length || 0;
+    const pendingAppointments = appointmentsData?.filter((a: any) => a.status === 'pending').length || 0;
+    const completedAppointments = appointmentsData?.filter((a: any) => a.status === 'completed').length || 0;
+    
+    // Calculate total revenue from completed appointments
+    const totalRevenue = appointmentsData
+      ?.filter((a: any) => a.status === 'completed')
+      .reduce((sum: number, appointment: any) => {
+        const service = servicesData?.find((s: any) => s.id === appointment.service_id);
+        return sum + (service?.price || 0);
+      }, 0) || 0;
+    
+    return {
+      totalAppointments,
+      pendingAppointments,
+      completedAppointments,
+      totalRevenue,
+      averageServiceTime: '30 min',
+      recentAppointments: (appointmentsData || []).slice(0, 5)
+    };
+  }, []);
+
+  // Função para carregar estatísticas do dashboard com carregamento paralelo
   const loadDashboardStats = useCallback(async (userProfile: Profile) => {
-    if (!userProfile) {
-      console.log('[useDashboardData] No userProfile provided');
+    if (!isMounted() || !userProfile) {
+      console.log('[useDashboardData] No userProfile provided or component unmounted');
       return;
     }
 
+    let statsAbortController: AbortController | null = null;
+
     try {
       console.log('[useDashboardData] Checking for existing barber for profile:', userProfile.id);
+      
+      // Criar AbortController para esta operação
+      statsAbortController = new AbortController();
+      abortControllerRef.current = statsAbortController;
       
       // Check if a barber with this profile already exists
       const { data: existingBarber, error: barberCheckError } = await supabase
@@ -162,6 +257,11 @@ export const useDashboardData = () => {
         .select('id')
         .eq('profile_id', userProfile.id)
         .maybeSingle();
+        
+      if (statsAbortController.signal.aborted) {
+        console.log('[useDashboardData] Stats load aborted');
+        return;
+      }
         
       if (barberCheckError) {
         console.error('[useDashboardData] Barber check error:', barberCheckError);
@@ -184,6 +284,11 @@ export const useDashboardData = () => {
           .select('id')
           .single();
           
+        if (statsAbortController.signal.aborted) {
+          console.log('[useDashboardData] Barber creation aborted');
+          return;
+        }
+          
         if (createBarberError || !newBarber) {
           throw new Error('Não foi possível configurar sua barbearia. Por favor, tente novamente.');
         }
@@ -198,76 +303,78 @@ export const useDashboardData = () => {
       // If no barbers found, return early with empty stats
       if (barbersList.length === 0) {
         console.log('[useDashboardData] No barbers found, setting empty stats');
-        setStats({
-          totalAppointments: 0,
-          pendingAppointments: 0,
-          completedAppointments: 0,
-          totalRevenue: 0,
-          averageServiceTime: '0 min',
-          recentAppointments: []
-        });
+        if (isMounted()) {
+          setStats({
+            totalAppointments: 0,
+            pendingAppointments: 0,
+            completedAppointments: 0,
+            totalRevenue: 0,
+            averageServiceTime: '0 min',
+            recentAppointments: []
+          });
+        }
         return;
       }
       
       const barberIds = barbersList.map(b => b.id);
-      console.log('[useDashboardData] Loading appointments for barbers:', barberIds);
+      console.log('[useDashboardData] Loading appointments and services for barbers:', barberIds);
       
-      // Get appointments for these barbers
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select('*')
-        .in('barber_id', barberIds);
-        
-      if (appointmentsError) {
-        console.error('[useDashboardData] Appointments error:', appointmentsError);
-        throw appointmentsError;
+      // Carregamento paralelo de appointments e services
+      const [appointmentsResult, servicesResult] = await Promise.all([
+        supabase
+          .from('appointments')
+          .select('*')
+          .in('barber_id', barberIds),
+        supabase
+          .from('services')
+          .select('id, price')
+          .in('barber_id', barberIds)
+      ]);
+      
+      if (statsAbortController.signal.aborted) {
+        console.log('[useDashboardData] Parallel load aborted');
+        return;
       }
       
-      console.log('[useDashboardData] Loading services for barbers...');
-      // Get services to calculate revenue
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, price')
-        .in('barber_id', barberIds);
-        
-      if (servicesError) {
-        console.error('[useDashboardData] Services error:', servicesError);
-        throw servicesError;
+      if (appointmentsResult.error) {
+        console.error('[useDashboardData] Appointments error:', appointmentsResult.error);
+        throw appointmentsResult.error;
       }
       
-      // Calculate stats
-      const totalAppointments = appointmentsData?.length || 0;
-      const pendingAppointments = appointmentsData?.filter((a: any) => a.status === 'pending').length || 0;
-      const completedAppointments = appointmentsData?.filter((a: any) => a.status === 'completed').length || 0;
+      if (servicesResult.error) {
+        console.error('[useDashboardData] Services error:', servicesResult.error);
+        throw servicesResult.error;
+      }
       
-      // Calculate total revenue from completed appointments
-      const totalRevenue = appointmentsData
-        ?.filter((a: any) => a.status === 'completed')
-        .reduce((sum: number, appointment: any) => {
-          const service = servicesData?.find((s: any) => s.id === appointment.service_id);
-          return sum + (service?.price || 0);
-        }, 0) || 0;
+      // Calcular estatísticas
+      const calculatedStats = calculateStats(appointmentsResult.data || [], servicesResult.data || []);
       
-      console.log('[useDashboardData] Stats calculated:', { totalAppointments, pendingAppointments, completedAppointments, totalRevenue });
+      console.log('[useDashboardData] Stats calculated:', calculatedStats);
       
       // Set the stats
-      setStats({
-        totalAppointments,
-        pendingAppointments,
-        completedAppointments,
-        totalRevenue,
-        averageServiceTime: '30 min',
-        recentAppointments: (appointmentsData || []).slice(0, 5)
-      });
+      if (isMounted()) {
+        setStats(calculatedStats);
+      }
 
     } catch (err: any) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[useDashboardData] Stats load aborted');
+        return;
+      }
       console.error('[useDashboardData] Error loading stats:', err);
-      setError(err.message);
+      if (isMounted()) {
+        setError(err.message);
+      }
+    } finally {
+      if (abortControllerRef.current === statsAbortController) {
+        abortControllerRef.current = null;
+      }
     }
-  }, []);
+  }, [isMounted, calculateStats]);
 
+  // Função para calcular dias restantes do trial
   const calculateTrialDays = useCallback(() => {
-    if (!profile) return;
+    if (!profile || !isMounted()) return;
 
     const startDate = profile.subscription_start_date 
       ? new Date(profile.subscription_start_date) 
@@ -280,36 +387,37 @@ export const useDashboardData = () => {
     const diffTime = trialEndDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    setDaysRemaining(Math.max(0, diffDays));
-  }, [profile]);
+    if (isMounted()) {
+      setDaysRemaining(Math.max(0, diffDays));
+    }
+  }, [profile, isMounted]);
 
+  // Função principal para atualizar dados
   const refreshData = useCallback(async () => {
-    if (!user?.id) {
-      console.log('[useDashboardData] No user ID, skipping refresh');
+    if (!user?.id || !isMounted()) {
+      console.log('[useDashboardData] No user ID or component unmounted, skipping refresh');
       return;
     }
     
     // Evitar execuções simultâneas
-    if (loading) {
+    if (loadingRef.current) {
       console.log('[useDashboardData] Already loading, skipping refresh');
       return;
     }
     
-    // Verificar se componente ainda está montado
-    if (!mountedRef.current) {
-      console.log('[useDashboardData] Component unmounted, skipping refresh');
-      return;
-    }
-    
     // Verificar se já foi inicializado para este usuário
-    if (isInitialized.current && profile?.id === user.id) {
+    if (isInitializedRef.current && profile?.id === user.id) {
       console.log('[useDashboardData] Already initialized for this user, skipping refresh');
       return;
     }
     
     console.log('[useDashboardData] Starting to refresh data for user:', user.id);
-    setLoading(true);
-    setError('');
+    loadingRef.current = true;
+    
+    if (isMounted()) {
+      setLoading(true);
+      setError('');
+    }
     
     try {
       // First load the profile
@@ -318,7 +426,7 @@ export const useDashboardData = () => {
       console.log('[useDashboardData] Profile loaded:', loadedProfile ? 'success' : 'failed');
       
       // Verificar se componente ainda está montado antes de continuar
-      if (!mountedRef.current) {
+      if (!isMounted()) {
         console.log('[useDashboardData] Component unmounted during profile load, stopping');
         return;
       }
@@ -330,7 +438,7 @@ export const useDashboardData = () => {
         console.log('[useDashboardData] Dashboard stats loaded successfully');
       } else {
         console.log('[useDashboardData] No profile loaded, setting empty stats');
-        if (mountedRef.current) {
+        if (isMounted()) {
           setStats({
             ...INIT_STATS,
             recentAppointments: []
@@ -338,28 +446,34 @@ export const useDashboardData = () => {
         }
       }
     } catch (err: any) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[useDashboardData] Data refresh aborted');
+        return;
+      }
       console.error('[useDashboardData] Error refreshing data:', err);
-      if (mountedRef.current) {
+      if (isMounted()) {
         setError(err.message || 'Falha ao carregar os dados do painel');
       }
     } finally {
-      if (mountedRef.current) {
+      if (isMounted()) {
         console.log('[useDashboardData] Setting loading to false');
         setLoading(false);
+        loadingRef.current = false;
       }
     }
-  }, [user?.id, loadProfile, loadDashboardStats, loading, profile?.id]);
+  }, [user?.id, loadProfile, loadDashboardStats, profile?.id, isMounted]);
 
   // Initialize data when user changes
   useEffect(() => {
-    mountedRef.current = true;
-    let timeoutId: NodeJS.Timeout | null = null;
+    isMountedRef.current = true;
+    loadingRef.current = false;
+    isInitializedRef.current = false;
     
     console.log('[useDashboardData] useEffect triggered with user?.id:', user?.id);
     
     if (user?.id) {
       // Evitar execuções desnecessárias se o user ID não mudou
-      if (lastUserIdRef.current === user?.id && isInitialized.current) {
+      if (lastUserIdRef.current === user?.id && isInitializedRef.current) {
         console.log('[useDashboardData] User ID unchanged, skipping refresh');
         return;
       }
@@ -368,33 +482,28 @@ export const useDashboardData = () => {
       lastUserIdRef.current = user?.id;
       
       // Debounce para evitar múltiplas execuções
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
       
-      timeoutId = setTimeout(() => {
-        if (mountedRef.current && !loading) {
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (isMounted() && !loadingRef.current) {
           console.log('[useDashboardData] Executing refresh after debounce');
-          isInitialized.current = true;
-          // Usar setTimeout para evitar problemas de concorrência
-          setTimeout(() => {
-            if (mountedRef.current) {
-              refreshData();
-            }
-          }, 0);
-        } else if (!mountedRef.current) {
+          isInitializedRef.current = true;
+          refreshData();
+        } else if (!isMounted()) {
           console.log('[useDashboardData] Component unmounted, skipping refresh');
-        } else if (loading) {
+        } else if (loadingRef.current) {
           console.log('[useDashboardData] Already loading, skipping refresh');
         }
-      }, 300); // 300ms debounce
+      }, DEBOUNCE_MS);
       
     } else {
       console.log('[useDashboardData] No user, resetting state...');
       lastUserIdRef.current = null;
-      isInitialized.current = false;
+      isInitializedRef.current = false;
       // Reset state when user is not available
-      if (mountedRef.current) {
+      if (isMounted()) {
         setProfile(null);
         setStats({
           ...INIT_STATS,
@@ -408,20 +517,17 @@ export const useDashboardData = () => {
     
     return () => {
       console.log('[useDashboardData] Cleanup: component unmounted');
-      mountedRef.current = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        console.log('[useDashboardData] Cleanup: cleared timeout');
-      }
+      isMountedRef.current = false;
+      cleanup();
     };
-  }, [user?.id]); // Apenas user?.id como dependência estável
+  }, [user?.id, refreshData, cleanup, isMounted]);
 
   // Calculate trial days when profile changes
   useEffect(() => {
-    if (profile) {
+    if (profile && isMounted()) {
       calculateTrialDays();
     }
-  }, [profile, calculateTrialDays]);
+  }, [profile, calculateTrialDays, isMounted]);
 
   return {
     profile,

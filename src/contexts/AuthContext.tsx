@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { AuthService, LoginCredentials, RegisterCredentials } from '../services/authService';
 import { toast } from '@/hooks/use-toast';
@@ -27,123 +27,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Refs para controle de estado mutável
+  const isMountedRef = useRef(true);
+  const loadingRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const subscriptionRef = useRef<any>(null);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    let subscription: any = null;
-    let hasInitialized = false;
+  // Função para verificar se componente está montado
+  const isMounted = useCallback(() => isMountedRef.current, []);
 
-    const initializeAuth = async () => {
-      try {
-        console.log('[AuthContext] Initializing authentication...');
-        
-        const { data: session, error } = await AuthService.getCurrentSession();
-        
-        if (error) {
-          console.error('[AuthContext] Error getting session:', error);
-        }
-        
-        if (mounted) {
-          console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-          hasInitialized = true;
-          console.log('[AuthContext] Loading set to false (initialization)');
-        }
-      } catch (error) {
-        console.error('[AuthContext] Auth initialization error:', error);
-        if (mounted) {
-          setLoading(false);
-          hasInitialized = true;
-          console.log('[AuthContext] Loading set to false (error case)');
-        }
-      }
-    };
-
-    // Configurar listener para mudanças de estado - SEM async/await
-    const { data: { subscription: authSubscription } } = AuthService.onAuthStateChange(
-      (event, session) => {
-        console.log('[AuthContext] Auth state change:', event, session ? 'User present' : 'No user');
-        
-        if (!mounted) {
-          console.log('[AuthContext] Component unmounted, ignoring auth state change');
-          return;
-        }
-
-        // Evitar múltiplos eventos SIGNED_IN
-        if (event === 'SIGNED_IN' && hasInitialized) {
-          console.log('[AuthContext] Ignoring duplicate SIGNED_IN event');
-          return;
-        }
-
-        // Evitar re-renders desnecessários
-        setSession(prevSession => {
-          if (prevSession?.access_token === session?.access_token) {
-            return prevSession;
-          }
-          return session;
-        });
-        
-        setUser(prevUser => {
-          if (prevUser?.id === session?.user?.id) {
-            return prevUser;
-          }
-          return session?.user ?? null;
-        });
-        
-        setLoading(false);
-        hasInitialized = true;
-        console.log('[AuthContext] Loading set to false (auth state change)');
-        
-        // Se o usuário foi autenticado, garantir que tenha perfil
-        if (session?.user && event === 'SIGNED_IN') {
-          console.log('[AuthContext] User signed in, ensuring profile...');
-          // Usar setTimeout para tornar a chamada assíncrona e evitar retornar Promise
-          setTimeout(() => {
-            if (mounted) {
-              ensureUserProfile(session.user).catch((error) => {
-                console.error('[AuthContext] Error ensuring profile:', error);
-              });
-            }
-          }, 0);
-        }
-      }
-    );
-
-    subscription = authSubscription;
-
-    // Inicializar autenticação
-    initializeAuth();
+  // Função para limpar timeouts e abort controllers
+  const cleanup = useCallback(() => {
+    console.log('[AuthContext] Cleaning up resources...');
     
-    // Fallback: garantir que loading seja false após 3 segundos
-    const fallbackTimeout = setTimeout(() => {
-      if (mounted && !hasInitialized) {
-        console.warn('[AuthContext] Fallback: forcing loading to false');
-        setLoading(false);
-        hasInitialized = true;
-      }
-    }, 3000);
+    // Limpar debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
     
-    // Cleanup function
-    return () => {
-      console.log('[AuthContext] Cleaning up auth context');
-      mounted = false;
-      clearTimeout(fallbackTimeout);
-      if (subscription) {
-        subscription.unsubscribe();
-        console.log('[AuthContext] Auth subscription unsubscribed');
-      }
-    };
+    // Limpar fallback timeout
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+    
+    // Abortar operações pendentes
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Desinscrever do listener
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+      console.log('[AuthContext] Auth subscription unsubscribed');
+    }
   }, []);
 
   // Função para garantir que o usuário tenha um perfil
-  const ensureUserProfile = async (user: User) => {
+  const ensureUserProfile = useCallback(async (user: User) => {
+    if (!isMounted() || !user?.id) {
+      console.log('[AuthContext] Skipping profile creation - component unmounted or no user');
+      return;
+    }
+
+    let profileAbortController: AbortController | null = null;
+    
     try {
       console.log('[AuthContext] Ensuring profile for user:', user.id);
       
+      // Criar novo AbortController para esta operação
+      profileAbortController = new AbortController();
+      abortControllerRef.current = profileAbortController;
+      
       // Verificar se o perfil já existe usando o AuthService
       const { data: profileExists, error: profileError } = await AuthService.checkProfileExists(user.id);
+      
+      if (profileAbortController.signal.aborted) {
+        console.log('[AuthContext] Profile check aborted');
+        return;
+      }
       
       if (profileError) {
         console.error('[AuthContext] Error checking profile:', profileError);
@@ -152,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!profileExists) {
         console.log('[AuthContext] Profile does not exist, creating new one...');
+        
         // Perfil não existe, criar um usando o AuthService
         const { error: createError } = await AuthService.createProfile({
           id: user.id,
@@ -163,6 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: new Date().toISOString()
         });
 
+        if (profileAbortController.signal.aborted) {
+          console.log('[AuthContext] Profile creation aborted');
+          return;
+        }
+
         if (createError) {
           console.error('[AuthContext] Error creating profile:', createError);
         } else {
@@ -172,17 +127,178 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('[AuthContext] Profile already exists');
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[AuthContext] Profile operation aborted');
+        return;
+      }
       console.error('[AuthContext] Error in ensureUserProfile:', error);
+    } finally {
+      if (abortControllerRef.current === profileAbortController) {
+        abortControllerRef.current = null;
+      }
     }
-  };
+  }, [isMounted]);
+
+  // Função para debounce de eventos
+  const debouncedEnsureProfile = useCallback((user: User) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (isMounted()) {
+        ensureUserProfile(user).catch((error) => {
+          console.error('[AuthContext] Error in debounced profile creation:', error);
+        });
+      }
+    }, 300);
+  }, [ensureUserProfile, isMounted]);
+
+  // Função para inicializar autenticação
+  const initializeAuth = useCallback(async () => {
+    if (!isMounted() || loadingRef.current) {
+      console.log('[AuthContext] Skipping initialization - component unmounted or already loading');
+      return;
+    }
+
+    loadingRef.current = true;
+    let initAbortController: AbortController | null = null;
+    
+    try {
+      console.log('[AuthContext] Initializing authentication...');
+      
+      // Criar novo AbortController para inicialização
+      initAbortController = new AbortController();
+      abortControllerRef.current = initAbortController;
+      
+      const { data: session, error } = await AuthService.getCurrentSession();
+      
+      if (initAbortController.signal.aborted) {
+        console.log('[AuthContext] Initialization aborted');
+        return;
+      }
+      
+      if (error) {
+        console.error('[AuthContext] Error getting session:', error);
+      }
+      
+      if (isMounted()) {
+        console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        hasInitializedRef.current = true;
+        console.log('[AuthContext] Loading set to false (initialization)');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[AuthContext] Initialization aborted');
+        return;
+      }
+      console.error('[AuthContext] Auth initialization error:', error);
+      if (isMounted()) {
+        setLoading(false);
+        hasInitializedRef.current = true;
+        console.log('[AuthContext] Loading set to false (error case)');
+      }
+    } finally {
+      loadingRef.current = false;
+      if (abortControllerRef.current === initAbortController) {
+        abortControllerRef.current = null;
+      }
+    }
+  }, [isMounted]);
+
+  // Função para lidar com mudanças de estado de autenticação
+  const handleAuthStateChange = useCallback((event: string, session: Session | null) => {
+    if (!isMounted()) {
+      console.log('[AuthContext] Component unmounted, ignoring auth state change');
+      return;
+    }
+
+    console.log('[AuthContext] Auth state change:', event, session ? 'User present' : 'No user');
+
+    // Evitar múltiplos eventos SIGNED_IN
+    if (event === 'SIGNED_IN' && hasInitializedRef.current) {
+      console.log('[AuthContext] Ignoring duplicate SIGNED_IN event');
+      return;
+    }
+
+    // Evitar re-renders desnecessários usando functional updates
+    setSession(prevSession => {
+      if (prevSession?.access_token === session?.access_token) {
+        return prevSession;
+      }
+      return session;
+    });
+    
+    setUser(prevUser => {
+      if (prevUser?.id === session?.user?.id) {
+        return prevUser;
+      }
+      return session?.user ?? null;
+    });
+    
+    setLoading(false);
+    hasInitializedRef.current = true;
+    console.log('[AuthContext] Loading set to false (auth state change)');
+    
+    // Se o usuário foi autenticado, garantir que tenha perfil (com debounce)
+    if (session?.user && event === 'SIGNED_IN') {
+      console.log('[AuthContext] User signed in, scheduling profile creation...');
+      debouncedEnsureProfile(session.user);
+    }
+  }, [isMounted, debouncedEnsureProfile]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadingRef.current = false;
+    hasInitializedRef.current = false;
+    
+    console.log('[AuthContext] Setting up auth context...');
+
+    // Configurar listener para mudanças de estado
+    const { data: { subscription: authSubscription } } = AuthService.onAuthStateChange(handleAuthStateChange);
+    subscriptionRef.current = authSubscription;
+
+    // Inicializar autenticação
+    initializeAuth();
+    
+    // Fallback: garantir que loading seja false após 5 segundos
+    fallbackTimeoutRef.current = setTimeout(() => {
+      if (isMounted() && !hasInitializedRef.current) {
+        console.warn('[AuthContext] Fallback: forcing loading to false');
+        setLoading(false);
+        hasInitializedRef.current = true;
+      }
+    }, 5000);
+    
+    // Cleanup function
+    return () => {
+      console.log('[AuthContext] Cleaning up auth context');
+      isMountedRef.current = false;
+      cleanup();
+    };
+  }, [initializeAuth, handleAuthStateChange, cleanup, isMounted]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    if (!isMounted()) {
+      console.log('[AuthContext] Component unmounted, skipping login');
+      return false;
+    }
+
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const credentials: LoginCredentials = { email, password };
       const { data: user, error } = await AuthService.login(credentials);
   
+      if (!isMounted()) {
+        console.log('[AuthContext] Component unmounted during login');
+        return false;
+      }
+
       if (error) {
         console.error('Login error:', error);
         toast({
@@ -203,113 +319,136 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return false;
     } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Erro no login",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error('[AuthContext] Login error:', error);
+      if (isMounted()) {
+        toast({
+          title: "Erro no login",
+          description: "Erro inesperado durante o login",
+          variant: "destructive",
+        });
+      }
       return false;
     } finally {
-      setLoading(false);
+      if (isMounted()) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   };
 
   const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
+    if (!isMounted()) {
+      console.log('[AuthContext] Component unmounted, skipping register');
+      return false;
+    }
+
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const credentials: RegisterCredentials = { name, email, phone, password };
       const { data: user, error } = await AuthService.register(credentials);
-  
+
+      if (!isMounted()) {
+        console.log('[AuthContext] Component unmounted during register');
+        return false;
+      }
+
       if (error) {
         console.error('Register error:', error);
         toast({
-          title: "Erro no cadastro",
+          title: "Erro no registro",
           description: error,
           variant: "destructive",
         });
         return false;
       }
-  
-      // O perfil será criado automaticamente pelo trigger no banco de dados
-      // Então não precisamos fazer nada aqui
-  
+
       if (user) {
         toast({
-          title: "Conta criada com sucesso!",
-          description: user.email_confirmed_at 
-            ? "Bem-vindo ao BarberTime! Seu período gratuito de 7 dias começou agora."
-            : "Verifique seu email para confirmar a conta.",
+          title: "Registro realizado com sucesso!",
+          description: "Verifique seu email para confirmar a conta.",
         });
         return true;
       }
       
       return false;
     } catch (error) {
-      console.error('Register error:', error);
-      toast({
-        title: "Erro no cadastro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error('[AuthContext] Register error:', error);
+      if (isMounted()) {
+        toast({
+          title: "Erro no registro",
+          description: "Erro inesperado durante o registro",
+          variant: "destructive",
+        });
+      }
       return false;
     } finally {
-      setLoading(false);
+      if (isMounted()) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   };
 
   const logout = async () => {
+    if (!isMounted()) {
+      console.log('[AuthContext] Component unmounted, skipping logout');
+      return;
+    }
+
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const { error } = await AuthService.logout();
-      
+
+      if (!isMounted()) {
+        console.log('[AuthContext] Component unmounted during logout');
+        return;
+      }
+
       if (error) {
         console.error('Logout error:', error);
         toast({
           title: "Erro no logout",
-          description: "Ocorreu um erro ao fazer logout. Tente novamente.",
+          description: error,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Logout realizado",
-          description: "Você foi desconectado com sucesso.",
+          title: "Logout realizado com sucesso!",
+          description: "Até logo!",
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Erro no logout",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error('[AuthContext] Logout error:', error);
+      if (isMounted()) {
+        toast({
+          title: "Erro no logout",
+          description: "Erro inesperado durante o logout",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setLoading(false);
+      if (isMounted()) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   };
 
   const isTrialExpired = async (): Promise<boolean> => {
+    if (!isMounted() || !user) {
+      return false;
+    }
+
     try {
       return await AuthService.isTrialExpired();
     } catch (error) {
-      console.error('Error checking trial status:', error);
+      console.error('[AuthContext] Error checking trial status:', error);
       return false;
     }
-  };
-
-  // Função auxiliar para verificar trial por data (fallback)
-  const checkTrialByDate = (): boolean => {
-    if (!user) return false;
-    
-    // Esta é uma verificação básica por data
-    // Em produção, você deve usar a função isTrialExpired() que consulta o banco
-    const trialStart = user.created_at ? new Date(user.created_at) : new Date();
-    const trialEnd = new Date(trialStart);
-    trialEnd.setDate(trialEnd.getDate() + 7); // 7 dias de trial
-    
-    return new Date() > trialEnd;
   };
 
   const value: AuthContextType = {
