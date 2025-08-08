@@ -170,4 +170,99 @@ export class AuthService {
       return { data: null, error: 'Erro inesperado ao obter usuário' };
     }
   }
+
+  /**
+   * Verifica se o perfil do usuário existe no banco de dados
+   */
+  static async checkProfileExists(userId: string): Promise<AuthServiceResponse<boolean>> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Perfil não encontrado
+          return { data: false, error: null };
+        }
+        console.error('[AuthService] Error checking profile:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('[AuthService] Unexpected error checking profile:', error);
+      return { data: null, error: 'Erro inesperado ao verificar perfil' };
+    }
+  }
+
+  /**
+   * Cria um perfil para o usuário
+   */
+  static async createProfile(profileData: {
+    id: string;
+    name: string;
+    phone: string;
+    subscription_status: string;
+    subscription_start_date: string;
+    created_at: string;
+    updated_at: string;
+  }): Promise<AuthServiceResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('[AuthService] Error creating profile:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('[AuthService] Unexpected error creating profile:', error);
+      return { data: null, error: 'Erro inesperado ao criar perfil' };
+    }
+  }
+
+  /**
+   * Verifica se o período de teste do usuário expirou (versão sem parâmetro)
+   */
+  static async isTrialExpired(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return false;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('trial_expires_at')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('[AuthService] Error checking trial status:', error);
+        return false;
+      }
+
+      if (!data) {
+        return true; // Se não há perfil, considera expirado
+      }
+
+      const trialExpired = data.trial_expires_at 
+        ? new Date(data.trial_expires_at) < new Date()
+        : true;
+
+      return trialExpired;
+    } catch (error) {
+      console.error('[AuthService] Unexpected error checking trial:', error);
+      return false;
+    }
+  }
 }
