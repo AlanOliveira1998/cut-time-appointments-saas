@@ -31,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
     let subscription: any = null;
+    let hasInitialized = false;
 
     const initializeAuth = async () => {
       try {
@@ -47,12 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
+          hasInitialized = true;
           console.log('[AuthContext] Loading set to false (initialization)');
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
         if (mounted) {
           setLoading(false);
+          hasInitialized = true;
           console.log('[AuthContext] Loading set to false (error case)');
         }
       }
@@ -65,6 +68,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!mounted) {
           console.log('[AuthContext] Component unmounted, ignoring auth state change');
+          return;
+        }
+
+        // Evitar múltiplos eventos SIGNED_IN
+        if (event === 'SIGNED_IN' && hasInitialized) {
+          console.log('[AuthContext] Ignoring duplicate SIGNED_IN event');
           return;
         }
 
@@ -84,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         setLoading(false);
+        hasInitialized = true;
         console.log('[AuthContext] Loading set to false (auth state change)');
         
         // Se o usuário foi autenticado, garantir que tenha perfil
@@ -104,9 +114,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Fallback: garantir que loading seja false após 3 segundos
     const fallbackTimeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && !hasInitialized) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
+        hasInitialized = true;
       }
     }, 3000);
     

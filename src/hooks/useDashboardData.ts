@@ -57,6 +57,7 @@ export const useDashboardData = () => {
   const { user } = useAuth();
   const isInitialized = useRef(false);
   const mountedRef = useRef(true);
+  const lastUserIdRef = useRef<string | null>(null);
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<StatsWithAppointments>({
@@ -300,6 +301,12 @@ export const useDashboardData = () => {
       return;
     }
     
+    // Verificar se já foi inicializado para este usuário
+    if (isInitialized.current && profile?.id === user.id) {
+      console.log('[useDashboardData] Already initialized for this user, skipping refresh');
+      return;
+    }
+    
     console.log('[useDashboardData] Starting to refresh data for user:', user.id);
     setLoading(true);
     setError('');
@@ -341,7 +348,7 @@ export const useDashboardData = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, loadProfile, loadDashboardStats, loading]);
+  }, [user?.id, loadProfile, loadDashboardStats, loading, profile?.id]);
 
   // Initialize data when user changes
   useEffect(() => {
@@ -351,7 +358,14 @@ export const useDashboardData = () => {
     console.log('[useDashboardData] useEffect triggered with user?.id:', user?.id);
     
     if (user?.id) {
+      // Evitar execuções desnecessárias se o user ID não mudou
+      if (lastUserIdRef.current === user?.id && isInitialized.current) {
+        console.log('[useDashboardData] User ID unchanged, skipping refresh');
+        return;
+      }
+      
       console.log('[useDashboardData] User changed, scheduling refresh...');
+      lastUserIdRef.current = user?.id;
       
       // Debounce para evitar múltiplas execuções
       if (timeoutId) {
@@ -361,6 +375,7 @@ export const useDashboardData = () => {
       timeoutId = setTimeout(() => {
         if (mountedRef.current && !loading) {
           console.log('[useDashboardData] Executing refresh after debounce');
+          isInitialized.current = true;
           refreshData();
         } else if (!mountedRef.current) {
           console.log('[useDashboardData] Component unmounted, skipping refresh');
@@ -371,6 +386,8 @@ export const useDashboardData = () => {
       
     } else {
       console.log('[useDashboardData] No user, resetting state...');
+      lastUserIdRef.current = null;
+      isInitialized.current = false;
       // Reset state when user is not available
       if (mountedRef.current) {
         setProfile(null);
@@ -381,7 +398,6 @@ export const useDashboardData = () => {
         setLoading(false);
         setError('');
         setDaysRemaining(0);
-        isInitialized.current = false;
       }
     }
     
