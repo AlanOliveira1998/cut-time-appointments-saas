@@ -254,46 +254,5 @@ export class AuthService {
     }
   }
 
-  /**
-   * Verifica se o período de teste do usuário expirou (versão sem parâmetro)
-   */
-  static async isTrialExpired(): Promise<boolean> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return false;
-      }
 
-      // Exceção para o usuário alan.pires.oliveira@gmail.com - nunca expira
-      if (user.email === 'alan.pires.oliveira@gmail.com') {
-        console.log('[AuthService] User alan.pires.oliveira@gmail.com detected - trial never expires');
-        return false;
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('trial_expires_at')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('[AuthService] Error checking trial status:', error);
-        return false;
-      }
-
-      if (!data) {
-        return true; // Se não há perfil, considera expirado
-      }
-
-      const trialExpired = data.trial_expires_at 
-        ? new Date(data.trial_expires_at) < new Date()
-        : true;
-
-      return trialExpired;
-    } catch (error) {
-      console.error('[AuthService] Unexpected error checking trial:', error);
-      return false;
-    }
-  }
 }
