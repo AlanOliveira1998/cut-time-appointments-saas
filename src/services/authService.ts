@@ -146,10 +146,16 @@ export class AuthService {
   }
 
   /**
-   * Configura o listener de mudanças de estado de autenticação
+   * Configura listener para mudanças de estado de autenticação
    */
   static onAuthStateChange(callback: (event: string, session: Session | null) => void) {
-    return supabase.auth.onAuthStateChange(callback);
+    return supabase.auth.onAuthStateChange((event, session) => {
+      try {
+        callback(event, session);
+      } catch (error) {
+        console.error('[AuthService] Error in auth state change callback:', error);
+      }
+    });
   }
 
   /**
