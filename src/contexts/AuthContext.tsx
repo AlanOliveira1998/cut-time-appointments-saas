@@ -80,7 +80,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Se o usuário foi autenticado, garantir que tenha perfil
           if (session?.user && event === 'SIGNED_IN') {
             console.log('[AuthContext] User signed in, ensuring profile...');
-            await ensureUserProfile(session.user);
+            try {
+              await ensureUserProfile(session.user);
+              console.log('[AuthContext] Profile ensured successfully');
+            } catch (error) {
+              console.error('[AuthContext] Error ensuring profile:', error);
+            }
           }
         }
       }
@@ -89,14 +94,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Inicializar autenticação
     initializeAuth();
     
-    // Fallback: garantir que loading seja false após 10 segundos
+    // Fallback: garantir que loading seja false após 5 segundos
     const fallbackTimeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
         authInitialized = true;
       }
-    }, 10000);
+    }, 5000);
     
     // Cleanup function
     return () => {
