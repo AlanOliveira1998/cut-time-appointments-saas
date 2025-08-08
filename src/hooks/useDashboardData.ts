@@ -68,7 +68,9 @@ export const useDashboardData = () => {
 
   const createProfile = useCallback(async (userId: string, userMetadata: any) => {
     try {
-      const { data, error: createError } = await supabase
+      console.log('[useDashboardData] Creating profile...');
+      
+      const createPromise = supabase
         .from('profiles')
         .insert({
           id: userId,
@@ -82,10 +84,17 @@ export const useDashboardData = () => {
         .select('*')
         .single();
 
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile creation timeout')), 5000);
+      });
+
+      const { data, error: createError } = await Promise.race([createPromise, timeoutPromise]) as any;
+
       if (createError) {
         throw createError;
       }
 
+      console.log('[useDashboardData] Profile created successfully');
       return data;
     } catch (err) {
       console.error('[useDashboardData] Error in createProfile:', err);
@@ -101,12 +110,19 @@ export const useDashboardData = () => {
       }
 
       console.log('[useDashboardData] Checking for existing profile...');
-      // Primeiro tentar consultar o perfil existente
-      const { data, error: profileError } = await supabase
+      
+      // Add timeout for profile query
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile query timeout')), 5000);
+      });
+
+      const { data, error: profileError } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
       if (profileError && profileError.code === 'PGRST116') {
         // Perfil não existe, criar um
@@ -137,12 +153,19 @@ export const useDashboardData = () => {
 
     try {
       console.log('[useDashboardData] Checking for existing barber...');
-      // Check if a barber with this profile already exists
-      const { data: existingBarber, error: barberCheckError } = await supabase
+      
+      // Add timeout for barber check
+      const barberCheckPromise = supabase
         .from('barbers')
         .select('id')
         .eq('profile_id', userProfile.id)
         .maybeSingle();
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Barber check timeout')), 5000);
+      });
+
+      const { data: existingBarber, error: barberCheckError } = await Promise.race([barberCheckPromise, timeoutPromise]) as any;
         
       if (barberCheckError) {
         throw barberCheckError;
@@ -192,20 +215,32 @@ export const useDashboardData = () => {
       const barberIds = barbersList.map(b => b.id);
       console.log('[useDashboardData] Loading appointments for barbers:', barberIds);
       
-      // Get appointments for these barbers
-      const { data: appointmentsData, error: appointmentsError } = await supabase
+      // Get appointments for these barbers with timeout
+      const appointmentsPromise = supabase
         .from('appointments')
         .select('*')
         .in('barber_id', barberIds);
+
+      const appointmentsTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Appointments query timeout')), 5000);
+      });
+
+      const { data: appointmentsData, error: appointmentsError } = await Promise.race([appointmentsPromise, appointmentsTimeoutPromise]) as any;
         
       if (appointmentsError) throw appointmentsError;
       
       console.log('[useDashboardData] Loading services for barbers...');
-      // Get services to calculate revenue
-      const { data: servicesData, error: servicesError } = await supabase
+      // Get services to calculate revenue with timeout
+      const servicesPromise = supabase
         .from('services')
         .select('id, price')
         .in('barber_id', barberIds);
+
+      const servicesTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Services query timeout')), 5000);
+      });
+
+      const { data: servicesData, error: servicesError } = await Promise.race([servicesPromise, servicesTimeoutPromise]) as any;
         
       if (servicesError) throw servicesError;
       
