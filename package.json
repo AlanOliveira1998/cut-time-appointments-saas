@@ -22,7 +22,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "list-structure": "node list-project-structure.js",
     "prepare": "husky install",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6007 --no-open",
     "build-storybook": "storybook build"
   },
   "dependencies": {
