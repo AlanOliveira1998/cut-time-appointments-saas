@@ -30,7 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let authInitialized = false;
 
     const initializeAuth = async () => {
       try {
@@ -42,24 +41,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('[AuthContext] Error getting session:', error);
         }
         
-        if (mounted && !authInitialized) {
+        if (mounted) {
           console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
           setSession(session);
           setUser(session?.user ?? null);
-          
-          // Definir loading como false apenas se não foi definido pelo listener
-          if (!authInitialized) {
-            setLoading(false);
-            console.log('[AuthContext] Loading set to false (initialization)');
-          }
-          authInitialized = true;
+          setLoading(false);
+          console.log('[AuthContext] Loading set to false (initialization)');
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
-        if (mounted && !authInitialized) {
+        if (mounted) {
           setLoading(false);
           console.log('[AuthContext] Loading set to false (error case)');
-          authInitialized = true;
         }
       }
     };
@@ -71,11 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          
-          // Sempre definir loading como false quando há mudança de estado
           setLoading(false);
           console.log('[AuthContext] Loading set to false (auth state change)');
-          authInitialized = true;
           
           // Se o usuário foi autenticado, garantir que tenha perfil
           if (session?.user && event === 'SIGNED_IN') {
@@ -94,14 +84,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Inicializar autenticação
     initializeAuth();
     
-    // Fallback: garantir que loading seja false após 5 segundos
+    // Fallback: garantir que loading seja false após 2 segundos
     const fallbackTimeout = setTimeout(() => {
-      if (mounted && loading) {
+      if (mounted) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
-        authInitialized = true;
       }
-    }, 5000);
+    }, 2000);
     
     // Cleanup function
     return () => {

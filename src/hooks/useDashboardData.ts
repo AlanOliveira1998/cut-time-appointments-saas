@@ -264,11 +264,21 @@ export const useDashboardData = () => {
     }
   }, [user?.id, loadProfile, loadDashboardStats]);
 
-  // Initialize data only once when user changes
+  // Initialize data when user changes
   useEffect(() => {
-    if (user?.id && !isInitialized.current) {
-      isInitialized.current = true;
+    if (user?.id) {
       refreshData();
+    } else {
+      // Reset state when user is not available
+      setProfile(null);
+      setStats({
+        ...INIT_STATS,
+        recentAppointments: []
+      });
+      setLoading(false);
+      setError('');
+      setDaysRemaining(0);
+      isInitialized.current = false;
     }
   }, [user?.id, refreshData]);
 
