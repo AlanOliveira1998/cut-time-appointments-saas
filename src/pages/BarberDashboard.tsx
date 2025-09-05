@@ -299,16 +299,16 @@ const BarberDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={serviceStats}
+                  data={serviceStats || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ serviceName, percent }) => `${serviceName} ${(percent * 100).toFixed(0)}%`}
+                  label={({ serviceName, percent }) => `${serviceName} ${((percent || 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {serviceStats.map((entry, index) => (
+                  {(serviceStats || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -320,7 +320,7 @@ const BarberDashboard: React.FC = () => {
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Detalhes por Serviço</h3>
               <div className="space-y-2">
-                {serviceStats.map((service, index) => (
+                {(serviceStats || []).map((service, index) => (
                   <div key={service.serviceName} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
                       <div 
