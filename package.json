@@ -11,6 +11,7 @@
     "build": "tsc && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
+    "build:vercel": "npm run build:prod",
     "preview": "vite preview",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -23,7 +24,10 @@
     "list-structure": "node list-project-structure.js",
     "prepare": "husky install",
     "storybook": "storybook dev -p 6007 --no-open",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "test:supabase": "node test-supabase-connection.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
