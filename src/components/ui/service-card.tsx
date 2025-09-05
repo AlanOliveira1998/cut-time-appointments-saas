@@ -31,7 +31,10 @@ interface ServiceCardProps {
   showActions?: boolean;
 }
 
-const formatPrice = (price: number): string => {
+const formatPrice = (price: number | undefined | null): string => {
+  if (price === undefined || price === null || isNaN(price)) {
+    return 'R$ 0,00';
+  }
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',

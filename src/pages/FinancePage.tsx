@@ -131,7 +131,10 @@ export const FinancePage = () => {
   }, [user, loadFinanceStats]);
 
   // Formatar preço
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (price === undefined || price === null || isNaN(price)) {
+      return 'R$ 0,00';
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -227,7 +230,7 @@ export const FinancePage = () => {
                   <CardContent>
                     <div className="text-2xl font-bold">{formatPrice(stats.totalRevenue)}</div>
                     <p className="text-xs text-muted-foreground">
-                      {stats.totalAppointments} agendamento{stats.totalAppointments !== 1 ? 's' : ''}
+                      {stats.totalAppointments || 0} agendamento{(stats.totalAppointments || 0) !== 1 ? 's' : ''}
                     </p>
                   </CardContent>
                 </Card>
@@ -291,19 +294,19 @@ export const FinancePage = () => {
                       <div className="flex items-center space-x-2">
                         <Badge variant="default">Completados</Badge>
                       </div>
-                      <span className="font-medium">{stats.completedAppointments}</span>
+                      <span className="font-medium">{stats.completedAppointments || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary">Pendentes</Badge>
                       </div>
-                      <span className="font-medium">{stats.pendingAppointments}</span>
+                      <span className="font-medium">{stats.pendingAppointments || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Badge variant="outline">Total</Badge>
                       </div>
-                      <span className="font-medium">{stats.totalAppointments}</span>
+                      <span className="font-medium">{stats.totalAppointments || 0}</span>
                     </div>
                   </div>
                 </CardContent>
