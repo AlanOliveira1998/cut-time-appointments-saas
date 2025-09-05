@@ -115,6 +115,26 @@ export class AuthService {
   }
 
   /**
+   * Verifica se o período de teste do usuário atual expirou
+   */
+  static async isTrialExpired(): Promise<boolean> {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('[AuthService] Error getting current user:', userError);
+        return true; // Se não consegue obter usuário, considera expirado
+      }
+
+      const result = await this.isTrialExpired(user.id);
+      return result.data ?? true; // Se há erro, considera expirado
+    } catch (error) {
+      console.error('[AuthService] Unexpected error checking trial:', error);
+      return true; // Em caso de erro, considera expirado
+    }
+  }
+
+  /**
    * Verifica se o período de teste do usuário expirou (versão com userId)
    */
   static async isTrialExpired(userId: string): Promise<AuthServiceResponse<boolean>> {
@@ -135,7 +155,7 @@ export class AuthService {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('trial_expires_at')
+        .select('subscription_status, trial_expires_at, subscription_start_date')
         .eq('id', userId)
         .single();
 
@@ -148,11 +168,24 @@ export class AuthService {
         return { data: true, error: null }; // Se não há perfil, considera expirado
       }
 
-      const trialExpired = data.trial_expires_at 
-        ? new Date(data.trial_expires_at) < new Date()
-        : true;
+      // Se a assinatura está ativa, trial não expirou
+      if (data.subscription_status === 'active') {
+        return { data: false, error: null };
+      }
 
-      return { data: trialExpired, error: null };
+      // Se ainda está em trial, verificar se expirou
+      if (data.subscription_status === 'trial') {
+        const trialExpired = data.trial_expires_at 
+          ? new Date(data.trial_expires_at) < new Date()
+          : data.subscription_start_date 
+            ? new Date(data.subscription_start_date) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            : true;
+
+        return { data: trialExpired, error: null };
+      }
+
+      // Para outros status (cancelled, expired), considera expirado
+      return { data: true, error: null };
     } catch (error) {
       console.error('[AuthService] Unexpected error checking trial:', error);
       return { data: null, error: 'Erro inesperado ao verificar período de teste' };

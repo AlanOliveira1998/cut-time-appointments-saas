@@ -69,11 +69,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!profileExists) {
         console.log('[AuthContext] Profile does not exist, creating new one...');
         
+        // Determinar status da assinatura baseado no email
+        const subscriptionStatus = user.email === 'alan.pires.oliveira@gmail.com' ? 'active' : 'trial';
+        
         const { error: createError } = await AuthService.createProfile({
           id: user.id,
           name: user.user_metadata?.name || user.user_metadata?.full_name || 'Novo Usuário',
           phone: user.user_metadata?.phone || '',
-          subscription_status: 'trial',
+          subscription_status: subscriptionStatus,
           subscription_start_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

@@ -114,13 +114,16 @@ export const useDashboardData = () => {
     try {
       console.log('[useDashboardData] Creating profile...');
       
+      // Determinar status da assinatura baseado no email
+      const subscriptionStatus = user?.email === 'alan.pires.oliveira@gmail.com' ? 'active' : 'trial';
+      
       const { data, error: createError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
           name: userMetadata?.name || userMetadata?.full_name || 'Novo Usuário',
           phone: userMetadata?.phone || '',
-          subscription_status: 'trial',
+          subscription_status: subscriptionStatus,
           subscription_start_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
