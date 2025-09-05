@@ -28,20 +28,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Refs para controle de estado
+  // Refs para controle de estado mutável
   const isMountedRef = useRef(true);
+  const loadingRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const subscriptionRef = useRef<any>(null);
-  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Função para limpar recursos
+  // Função para verificar se componente está montado
+  const isMounted = useCallback(() => isMountedRef.current, []);
+
+  // Função para limpar timeouts e abort controllers
   const cleanup = useCallback(() => {
     console.log('[AuthContext] Cleaning up resources...');
     
-    if (initTimeoutRef.current) {
-      clearTimeout(initTimeoutRef.current);
-      initTimeoutRef.current = null;
+    // Limpar debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
     }
     
+    // Limpar fallback timeout
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+    
+    // Abortar operações pendentes
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Desinscrever do listener
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
@@ -51,15 +72,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Função para garantir que o usuário tenha um perfil
   const ensureUserProfile = useCallback(async (user: User) => {
-    if (!isMountedRef.current || !user?.id) {
+    if (!isMounted() || !user?.id) {
       console.log('[AuthContext] Skipping profile creation - component unmounted or no user');
       return;
     }
 
+    let profileAbortController: AbortController | null = null;
+    
     try {
       console.log('[AuthContext] Ensuring profile for user:', user.id);
       
+      // Criar novo AbortController para esta operação
+      profileAbortController = new AbortController();
+      abortControllerRef.current = profileAbortController;
+      
+      // Verificar se o perfil já existe usando o AuthService
       const { data: profileExists, error: profileError } = await AuthService.checkProfileExists(user.id);
+      
+      if (profileAbortController.signal.aborted) {
+        console.log('[AuthContext] Profile check aborted');
+        return;
+      }
       
       if (profileError) {
         console.error('[AuthContext] Error checking profile:', profileError);
@@ -69,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!profileExists) {
         console.log('[AuthContext] Profile does not exist, creating new one...');
         
+        // Perfil não existe, criar um usando o AuthService
         const { error: createError } = await AuthService.createProfile({
           id: user.id,
           name: user.user_metadata?.name || user.user_metadata?.full_name || 'Novo Usuário',
@@ -79,6 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: new Date().toISOString()
         });
 
+        if (profileAbortController.signal.aborted) {
+          console.log('[AuthContext] Profile creation aborted');
+          return;
+        }
+
         if (createError) {
           console.error('[AuthContext] Error creating profile:', createError);
         } else {
@@ -88,35 +127,133 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('[AuthContext] Profile already exists');
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[AuthContext] Profile operation aborted');
+        return;
+      }
       console.error('[AuthContext] Error in ensureUserProfile:', error);
+    } finally {
+      if (abortControllerRef.current === profileAbortController) {
+        abortControllerRef.current = null;
+      }
     }
-  }, []);
+  }, [isMounted]);
+
+  // Função para debounce de eventos
+  const debouncedEnsureProfile = useCallback((user: User) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (isMounted()) {
+        ensureUserProfile(user).catch((error) => {
+          console.error('[AuthContext] Error in debounced profile creation:', error);
+        });
+      }
+    }, 300);
+  }, [ensureUserProfile, isMounted]);
+
+  // Função para inicializar autenticação
+  const initializeAuth = useCallback(async () => {
+    if (!isMounted() || loadingRef.current) {
+      console.log('[AuthContext] Skipping initialization - component unmounted or already loading');
+      return;
+    }
+
+    loadingRef.current = true;
+    let initAbortController: AbortController | null = null;
+    
+    try {
+      console.log('[AuthContext] Initializing authentication...');
+      
+      // Criar novo AbortController para inicialização
+      initAbortController = new AbortController();
+      abortControllerRef.current = initAbortController;
+      
+      const { data: session, error } = await AuthService.getCurrentSession();
+      
+      if (initAbortController.signal.aborted) {
+        console.log('[AuthContext] Initialization aborted');
+        return;
+      }
+      
+      if (error) {
+        console.error('[AuthContext] Error getting session:', error);
+      }
+      
+      if (isMounted()) {
+        console.log('[AuthContext] Session loaded:', session ? 'User logged in' : 'No session');
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        hasInitializedRef.current = true;
+        console.log('[AuthContext] Loading set to false (initialization)');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[AuthContext] Initialization aborted');
+        return;
+      }
+      console.error('[AuthContext] Auth initialization error:', error);
+      if (isMounted()) {
+        setLoading(false);
+        hasInitializedRef.current = true;
+        console.log('[AuthContext] Loading set to false (error case)');
+      }
+    } finally {
+      loadingRef.current = false;
+      if (abortControllerRef.current === initAbortController) {
+        abortControllerRef.current = null;
+      }
+    }
+  }, [isMounted]);
 
   // Função para lidar com mudanças de estado de autenticação
   const handleAuthStateChange = useCallback((event: string, session: Session | null) => {
-    if (!isMountedRef.current) {
+    if (!isMounted()) {
       console.log('[AuthContext] Component unmounted, ignoring auth state change');
       return;
     }
 
     console.log('[AuthContext] Auth state change:', event, session ? 'User present' : 'No user');
 
-    setSession(session);
-    setUser(session?.user ?? null);
-    setLoading(false);
-    
-    // Se o usuário foi autenticado, garantir que tenha perfil
-    if (session?.user && event === 'SIGNED_IN') {
-      console.log('[AuthContext] User signed in, ensuring profile...');
-      ensureUserProfile(session.user).catch((error) => {
-        console.error('[AuthContext] Error in profile creation:', error);
-      });
+    // Evitar múltiplos eventos SIGNED_IN
+    if (event === 'SIGNED_IN' && hasInitializedRef.current) {
+      console.log('[AuthContext] Ignoring duplicate SIGNED_IN event');
+      return;
     }
-  }, [ensureUserProfile]);
 
-  // Inicialização simplificada
+    // Evitar re-renders desnecessários usando functional updates
+    setSession(prevSession => {
+      if (prevSession?.access_token === session?.access_token) {
+        return prevSession;
+      }
+      return session;
+    });
+    
+    setUser(prevUser => {
+      if (prevUser?.id === session?.user?.id) {
+        return prevUser;
+      }
+      return session?.user ?? null;
+    });
+    
+    setLoading(false);
+    hasInitializedRef.current = true;
+    console.log('[AuthContext] Loading set to false (auth state change)');
+    
+    // Se o usuário foi autenticado, garantir que tenha perfil (com debounce)
+    if (session?.user && event === 'SIGNED_IN') {
+      console.log('[AuthContext] User signed in, scheduling profile creation...');
+      debouncedEnsureProfile(session.user);
+    }
+  }, [isMounted, debouncedEnsureProfile]);
+
   useEffect(() => {
     isMountedRef.current = true;
+    loadingRef.current = false;
+    hasInitializedRef.current = false;
     
     console.log('[AuthContext] Setting up auth context...');
 
@@ -124,13 +261,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription: authSubscription } } = AuthService.onAuthStateChange(handleAuthStateChange);
     subscriptionRef.current = authSubscription;
 
-    // Fallback: garantir que loading seja false após 3 segundos
-    initTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) {
+    // Inicializar autenticação
+    initializeAuth();
+    
+    // Fallback: garantir que loading seja false após 5 segundos
+    fallbackTimeoutRef.current = setTimeout(() => {
+      if (isMounted() && !hasInitializedRef.current) {
         console.warn('[AuthContext] Fallback: forcing loading to false');
         setLoading(false);
+        hasInitializedRef.current = true;
       }
-    }, 3000);
+    }, 5000);
     
     // Cleanup function
     return () => {
@@ -138,21 +279,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMountedRef.current = false;
       cleanup();
     };
-  }, []); // Dependências vazias para evitar loops
+  }, [initializeAuth, handleAuthStateChange, cleanup, isMounted]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (!isMountedRef.current) {
+    if (!isMounted()) {
       console.log('[AuthContext] Component unmounted, skipping login');
       return false;
     }
 
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const credentials: LoginCredentials = { email, password };
       const { data: user, error } = await AuthService.login(credentials);
   
-      if (!isMountedRef.current) {
+      if (!isMounted()) {
         console.log('[AuthContext] Component unmounted during login');
         return false;
       }
@@ -178,7 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('[AuthContext] Login error:', error);
-      if (isMountedRef.current) {
+      if (isMounted()) {
         toast({
           title: "Erro no login",
           description: "Erro inesperado durante o login",
@@ -187,25 +329,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } finally {
-      if (isMountedRef.current) {
+      if (isMounted()) {
         setLoading(false);
+        loadingRef.current = false;
       }
     }
   };
 
   const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
-    if (!isMountedRef.current) {
+    if (!isMounted()) {
       console.log('[AuthContext] Component unmounted, skipping register');
       return false;
     }
 
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const credentials: RegisterCredentials = { name, email, phone, password };
       const { data: user, error } = await AuthService.register(credentials);
 
-      if (!isMountedRef.current) {
+      if (!isMounted()) {
         console.log('[AuthContext] Component unmounted during register');
         return false;
       }
@@ -231,7 +375,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('[AuthContext] Register error:', error);
-      if (isMountedRef.current) {
+      if (isMounted()) {
         toast({
           title: "Erro no registro",
           description: "Erro inesperado durante o registro",
@@ -240,24 +384,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } finally {
-      if (isMountedRef.current) {
+      if (isMounted()) {
         setLoading(false);
+        loadingRef.current = false;
       }
     }
   };
 
   const logout = async () => {
-    if (!isMountedRef.current) {
+    if (!isMounted()) {
       console.log('[AuthContext] Component unmounted, skipping logout');
       return;
     }
 
     try {
       setLoading(true);
+      loadingRef.current = true;
       
       const { error } = await AuthService.logout();
 
-      if (!isMountedRef.current) {
+      if (!isMounted()) {
         console.log('[AuthContext] Component unmounted during logout');
         return;
       }
@@ -277,7 +423,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('[AuthContext] Logout error:', error);
-      if (isMountedRef.current) {
+      if (isMounted()) {
         toast({
           title: "Erro no logout",
           description: "Erro inesperado durante o logout",
@@ -285,14 +431,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } finally {
-      if (isMountedRef.current) {
+      if (isMounted()) {
         setLoading(false);
+        loadingRef.current = false;
       }
     }
   };
 
   const isTrialExpired = async (): Promise<boolean> => {
-    if (!isMountedRef.current || !user) {
+    if (!isMounted() || !user) {
       return false;
     }
 
