@@ -165,7 +165,7 @@ export const useFinanceData = () => {
       a.client_name,
       a.appointment_date,
       a.appointment_time,
-      a.services?.price ? a.services.price.toFixed(2) : '-',
+      a.services?.price ? (a.services.price || 0).toFixed(2) : '-',
       a.status
     ]);
 
