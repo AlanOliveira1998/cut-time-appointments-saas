@@ -82,7 +82,13 @@ export const useBarbers = () => {
       }));
 
       console.log('Barbeiros carregados com horários:', barbersWithHours);
-      setBarbers(barbersWithHours as Barber[]);
+      // Garantir que os dados são válidos antes de definir
+      const validBarbers = barbersWithHours.filter(barber => 
+        barber && 
+        typeof barber === 'object' && 
+        barber.id
+      ) as Barber[];
+      setBarbers(validBarbers);
     } catch (error) {
       console.error('Error loading barbers:', error);
       toast({

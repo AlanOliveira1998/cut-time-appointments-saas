@@ -46,7 +46,13 @@ export const useBarbers = () => {
       }
       
       console.log('✅ Barbeiros carregados:', data?.length || 0);
-      setBarbers((data || []) as Barber[]);
+      // Garantir que os dados são válidos antes de definir
+      const validBarbers = (data || []).filter(barber => 
+        barber && 
+        typeof barber === 'object' && 
+        barber.id
+      ) as Barber[];
+      setBarbers(validBarbers);
     } catch (err: any) {
       console.error('💥 Erro ao buscar barbeiros:', err);
       setError(err.message || 'Erro ao carregar barbeiros');
