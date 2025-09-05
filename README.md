@@ -128,9 +128,65 @@ O projeto suporta português e inglês usando i18next:
 # Edite src/lib/i18n.ts e adicione as traduções
 ```
 
+## 🐳 Docker
+
+O projeto inclui configuração completa do Docker para facilitar o desenvolvimento e deploy:
+
+### Instalação Rápida com Docker
+
+1. **Configure as variáveis de ambiente:**
+   ```bash
+   cp env.docker.example .env
+   # Edite o arquivo .env com suas credenciais do Supabase
+   ```
+
+2. **Construa e execute:**
+   ```bash
+   # Usando script helper
+   ./docker-scripts.sh build
+   ./docker-scripts.sh start
+   
+   # Ou usando docker-compose diretamente
+   docker-compose up --build
+   ```
+
+3. **Acesse a aplicação:**
+   - Aplicação: http://localhost:3000
+   - Supabase Studio (modo local): http://localhost:54323
+
+### Comandos Docker Disponíveis
+
+#### Linux/macOS
+```bash
+./docker-scripts.sh build      # Construir imagem
+./docker-scripts.sh start      # Iniciar aplicação
+./docker-scripts.sh start-local # Iniciar com Supabase local
+./docker-scripts.sh stop       # Parar containers
+./docker-scripts.sh logs       # Ver logs
+./docker-scripts.sh clean      # Limpar tudo
+```
+
+#### Windows
+```powershell
+.\docker-scripts.ps1 build     # Construir imagem
+.\docker-scripts.ps1 start     # Iniciar aplicação
+.\docker-scripts.ps1 start-local # Iniciar com Supabase local
+.\docker-scripts.ps1 stop      # Parar containers
+.\docker-scripts.ps1 logs      # Ver logs
+.\docker-scripts.ps1 clean     # Limpar tudo
+.\docker-scripts.ps1 test      # Testar aplicação
+```
+
+📖 **Documentação completa**: [DOCKER_SETUP.md](DOCKER_SETUP.md)
+
 ## 🚀 Deploy
 
-### Vercel (Recomendado)
+### Docker (Recomendado para Produção)
+1. Configure as variáveis de ambiente
+2. Execute `./docker-scripts.sh start-prod`
+3. A aplicação estará disponível na porta 80
+
+### Vercel (Recomendado para Desenvolvimento)
 1. Conecte seu repositório ao Vercel
 2. Configure as variáveis de ambiente
 3. Deploy automático a cada push
