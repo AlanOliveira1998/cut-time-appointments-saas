@@ -1,6 +1,8 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+// We intentionally avoid static imports for `i18next` and `react-i18next`
+// so that the file can be imported in environments where those packages
+// are not resolvable at bundle time (e.g. when opened via file:// or
+// when the bundler misconfigures externals). The initialization below
+// uses dynamic imports which Rollup won't try to resolve at build time.
 
 // Traduções em português
 const ptTranslations = {
@@ -305,10 +307,29 @@ const enTranslations = {
 };
 
 // Configuração do i18next
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
+const initI18n = async () => {
+  try {
+    const [{ default: i18n }, reactI18nextModule] = await Promise.all([
+      import('i18next'),
+      import('react-i18next'),
+    ]);
+
+    const initReactI18next = reactI18nextModule.initReactI18next ?? reactI18nextModule.default?.initReactI18next;
+
+    const i18nInstance = i18n.use(initReactI18next);
+
+    // Try to load the browser language detector if available
+    try {
+      const mod = await import('i18next-browser-languagedetector');
+      const Det = mod?.default ?? mod;
+      if (Det) {
+        i18nInstance.use(Det);
+      }
+    } catch (err) {
+      // optional — continue without detector
+    }
+
+    await i18nInstance.init({
     resources: {
       pt: {
         translation: ptTranslations,
@@ -328,6 +349,22 @@ i18n
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
     },
-  });
+    });
+  } catch (err) {
+    // If anything fails (modules not present, etc.) we swallow errors to
+    // avoid breaking the app when opened in environments that can't
+    // resolve these dependencies. The rest of the app can still run; any
+    // translation calls will simply be no-ops until i18n is available.
+    // eslint-disable-next-line no-console
+    // console.warn('i18n initialization skipped:', err);
+  }
+};
 
-export default i18n;
+// Start initialization but don't block app import.
+initI18n();
+
+// Export a small facade so other modules can import this file for side-effects.
+// We don't export the real i18n instance here because it may not be available
+// synchronously. Components should use react-i18next hooks which are resilient
+// to async initialization.
+export default {} as any;

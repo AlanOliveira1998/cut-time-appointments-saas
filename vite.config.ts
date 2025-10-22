@@ -19,13 +19,19 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    // Ensure i18n packages are pre-bundled so Rollup can resolve them during build.
+    include: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+  },
   build: {
     // Otimizações para produção
     target: 'esnext',
     minify: 'esbuild',
     sourcemap: mode === 'development',
-    rollupOptions: {
-      external: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+      rollupOptions: {
+      // Do not externalize i18next related packages — they must be bundled for the browser.
+      // Externalizing them causes runtime errors like:
+      // "Failed to resolve module specifier 'i18next'. Relative references must start with either '/', './', or '../'."
       output: {
         manualChunks: {
           // Separar vendor chunks para melhor cache
