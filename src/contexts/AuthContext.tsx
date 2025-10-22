@@ -9,6 +9,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  // alias para compatibilidade com componentes que usam `signOut`
+  signOut: () => Promise<void>;
   isTrialExpired: () => Promise<boolean>;
   loading: boolean;
 }
@@ -300,7 +302,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      return await AuthService.isTrialExpired();
+      const result = await AuthService.isTrialExpired(user.id);
+      return result.data ?? false;
     } catch (error) {
       console.error('[AuthContext] Error checking trial status:', error);
       return false;
@@ -313,6 +316,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    // fornecer alias para compatibilidade com código existente
+    signOut: logout,
     isTrialExpired,
     loading,
   };
