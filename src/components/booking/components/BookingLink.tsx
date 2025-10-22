@@ -11,7 +11,9 @@ interface BookingLinkProps {
 }
 
 export const BookingLink: React.FC<BookingLinkProps> = ({ barberId, barberName }) => {
+  console.log('BookingLink rendered with:', { barberId, barberName }); // Debug log
   const bookingLink = BookingService.getBookingLink(barberId);
+  console.log('Generated booking link:', bookingLink); // Debug log
 
   const handleCopyLink = async () => {
     try {

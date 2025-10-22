@@ -297,6 +297,11 @@ export class BookingService {
    * Gera o link de agendamento para um barbeiro
    */
   static getBookingLink(barberId: string): string {
+    if (!barberId) {
+      console.error('[BookingService] Barber ID is required to generate booking link');
+      return '';
+    }
+
     // Gera um link absoluto para a página de agendamento com o ID do barbeiro
     // Use the '/agendar/:barberId' route to match the app routing and Share dialog.
     const baseUrl = window.location.origin;

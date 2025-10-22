@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Share2, Copy, MessageCircle } from 'lucide-react';
+import { BookingService } from '@/services/bookingService';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ interface ShareBookingLinkProps {
 }
 
 export const ShareBookingLink: React.FC<ShareBookingLinkProps> = ({ barberId, barberName }) => {
-  const bookingLink = `${window.location.origin}/agendar/${barberId}`;
+  const bookingLink = BookingService.getBookingLink(barberId);
 
   const handleCopyLink = async () => {
     try {

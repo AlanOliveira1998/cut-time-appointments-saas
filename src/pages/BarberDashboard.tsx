@@ -37,6 +37,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const BarberDashboard: React.FC = () => {
   const { user } = useAuth();
+  console.log('BarberDashboard user:', user); // Debug log
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 dias atrás
     endDate: new Date().toISOString().split('T')[0] // hoje
@@ -114,30 +115,32 @@ const BarberDashboard: React.FC = () => {
       </div>
 
       {/* Card do Link de Agendamento */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>
-            <div className="flex items-center mb-4">
-              <Share2 className="w-5 h-5 mr-2 text-primary" />
-              Link para Agendamentos dos Clientes
-            </div>  
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <BookingLink 
-              barberId={user.id} 
-              barberName={user.user_metadata?.name || 'Barbeiro'} 
-            />
-            <div className="flex justify-end">
-              <ShareBookingLink 
+      {user && user.id && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>
+              <div className="flex items-center mb-4">
+                <Share2 className="w-5 h-5 mr-2 text-primary" />
+                Link para Agendamentos dos Clientes
+              </div>  
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <BookingLink 
                 barberId={user.id} 
                 barberName={user.user_metadata?.name || 'Barbeiro'} 
               />
+              <div className="flex justify-end">
+                <ShareBookingLink 
+                  barberId={user.id} 
+                  barberName={user.user_metadata?.name || 'Barbeiro'} 
+                />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtros de Data */}
       <Card className="mb-6">
