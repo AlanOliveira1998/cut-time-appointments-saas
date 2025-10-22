@@ -80,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: user.user_metadata?.phone || '',
           subscription_status: subscriptionStatus,
           subscription_start_date: new Date().toISOString(),
+          trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });

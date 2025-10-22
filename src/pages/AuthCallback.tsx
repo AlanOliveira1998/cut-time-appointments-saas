@@ -40,8 +40,9 @@ export const AuthCallback: React.FC = () => {
                 id: data.session.user.id,
                 name: data.session.user.user_metadata?.full_name || data.session.user.user_metadata?.name || 'Usuário',
                 phone: data.session.user.user_metadata?.phone || null,
-                subscription_status: 'trial',
-                subscription_start_date: new Date().toISOString(),
+                  subscription_status: 'trial',
+                  subscription_start_date: new Date().toISOString(),
+                  trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
               });
 
             if (insertError) {

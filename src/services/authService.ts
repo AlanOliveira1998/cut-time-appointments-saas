@@ -265,6 +265,7 @@ export class AuthService {
     phone: string;
     subscription_status: string;
     subscription_start_date: string;
+    trial_expires_at?: string | null;
     created_at: string;
     updated_at: string;
   }): Promise<AuthServiceResponse<any>> {

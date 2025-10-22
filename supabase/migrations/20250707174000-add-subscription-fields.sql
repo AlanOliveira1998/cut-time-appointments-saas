@@ -65,6 +65,17 @@ BEGIN
   END IF;
   
   -- Se passou de 7 dias desde a criação, trial expirou
+  -- Preferir campo explicitamente definido `trial_expires_at` quando presente
+  IF EXISTS (SELECT 1 FROM profiles WHERE id = user_id AND trial_expires_at IS NOT NULL) THEN
+    PERFORM 1; -- apenas para clareza, a checagem abaixo usará trial_expires_at
+    DECLARE t_exp TIMESTAMP WITH TIME ZONE;
+    SELECT trial_expires_at INTO t_exp FROM profiles WHERE id = user_id;
+    IF t_exp IS NOT NULL AND t_exp < NOW() THEN
+      RETURN TRUE;
+    END IF;
+  END IF;
+
+  -- Fallback: Se passou de 7 dias desde a criação, trial expirou
   IF user_created IS NOT NULL AND user_created < NOW() - INTERVAL '7 days' THEN
     RETURN TRUE;
   END IF;
