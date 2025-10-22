@@ -43,6 +43,8 @@ vi.mock('lucide-react', () => ({
   Phone: () => <span data-testid="phone-icon">Phone</span>,
   Scissors: () => <span data-testid="scissors-icon">Scissors</span>,
   ArrowLeft: () => <span data-testid="arrow-left-icon">ArrowLeft</span>,
+  Share2: () => <span data-testid="share-icon">Share2</span>,
+  MessageSquare: () => <span data-testid="message-icon">MessageSquare</span>,
 }));
 
 // Mock das funções utilitárias

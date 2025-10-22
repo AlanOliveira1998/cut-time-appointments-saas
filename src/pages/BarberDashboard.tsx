@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Share2 } from 'lucide-react';
+import { ShareBookingLink } from '@/components/booking/ShareBookingLink';
+import { BookingLink } from '@/components/booking/components/BookingLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { 
@@ -109,6 +112,32 @@ const BarberDashboard: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard do Barbeiro</h1>
         <p className="text-gray-600">Acompanhe suas estatísticas e desempenho</p>
       </div>
+
+      {/* Link de Agendamento */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <BookingLink 
+            barberId={user.id} 
+            barberName={user.user_metadata?.name || 'Barbeiro'} 
+          />
+        </CardContent>
+      </Card>
+
+      {/* Link de Agendamento */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Share2 className="w-5 h-5 mr-2" />
+              Link para Agendamentos
+            </div>
+            <ShareBookingLink 
+              barberId={user.id} 
+              barberName={user.user_metadata?.name || 'Barbeiro'} 
+            />
+          </CardTitle>
+        </CardHeader>
+      </Card>
 
       {/* Filtros de Data */}
       <Card className="mb-6">

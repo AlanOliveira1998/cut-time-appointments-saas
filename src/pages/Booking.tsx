@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Scissors } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
+import { useParams } from 'react-router-dom';
 import { useBarbers } from '../components/booking/hooks/useBarbers';
 import { useBookingData, Service } from '../components/booking/hooks/useBookingData';
 import { calculateAvailableSlots } from '../components/booking/utils/bookingUtils';
@@ -28,7 +29,11 @@ interface Barber {
   } | null;
 }
 
-export const Booking: React.FC = () => {
+interface BookingProps {
+  initialBarberId?: string;
+}
+
+export const Booking: React.FC<BookingProps> = ({ initialBarberId }) => {
   const { filteredBarbers, loading: loadingBarbers } = useBarbers();
   
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
@@ -57,13 +62,22 @@ export const Booking: React.FC = () => {
     selectedBarber?.id
   );
 
-  // Sempre que a lista de barbeiros mudar e não houver barbeiro selecionado, selecione o primeiro
+  // Se houver um barberId na URL, use-o para buscar e selecionar o barbeiro
+  const { barberId: urlBarberId } = useParams<{ barberId: string }>();
+  const effectiveBarberId = urlBarberId || initialBarberId;
+
   useEffect(() => {
-    if (filteredBarbers.length > 0 && !selectedBarber) {
+    if (effectiveBarberId && filteredBarbers.length > 0) {
+      const barber = filteredBarbers.find(b => b.id === effectiveBarberId);
+      if (barber) {
+        setSelectedBarber(barber);
+        setCurrentStep(2); // Avança direto para seleção de serviço
+      }
+    } else if (filteredBarbers.length > 0 && !selectedBarber) {
       console.log('Selecionando primeiro barbeiro automaticamente:', filteredBarbers[0]);
       setSelectedBarber(filteredBarbers[0]);
     }
-  }, [filteredBarbers, selectedBarber]);
+  }, [filteredBarbers, selectedBarber, effectiveBarberId]);
 
   // Se chegar na etapa 3 sem barbeiro, volte para etapa 1
   useEffect(() => {
@@ -223,7 +237,10 @@ export const Booking: React.FC = () => {
           </p>
         </div>
 
-        <ProgressSteps currentStep={currentStep} />
+        <ProgressSteps 
+          currentStep={currentStep} 
+          skipBarberSelection={Boolean(effectiveBarberId)} 
+        />
 
         {/* Step 1: Selecionar Barbeiro */}
         {currentStep === 1 && (

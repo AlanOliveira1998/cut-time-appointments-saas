@@ -132,6 +132,10 @@ const AppRoutes: React.FC = () => {
         element={<Booking />} 
       />
       <Route 
+        path="/agendar/:barberId" 
+        element={<Booking />} 
+      />
+      <Route 
         path="/admin" 
         element={
           <ProtectedRoute>

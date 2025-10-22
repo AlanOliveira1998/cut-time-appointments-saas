@@ -292,4 +292,45 @@ export class BookingService {
       return { data: null, error: 'Erro inesperado ao obter estatísticas' };
     }
   }
+
+  /**
+   * Gera o link de agendamento para um barbeiro
+   */
+  static getBookingLink(barberId: string): string {
+    // Gera um link absoluto para a página de agendamento com o ID do barbeiro
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/booking/${barberId}`;
+  }
+
+  /**
+   * Obtém barbeiro por ID do link
+   */
+  static async getBarberByLinkId(linkId: string): Promise<ServiceResponse<Barber>> {
+    try {
+      const { data, error } = await supabase
+        .from('barbers')
+        .select(`
+          *,
+          profiles (
+            id,
+            name,
+            phone,
+            email
+          )
+        `)
+        .eq('id', linkId)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('[BookingService] Error getting barber by link:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('[BookingService] Unexpected error getting barber by link:', error);
+      return { data: null, error: 'Erro inesperado ao obter barbeiro pelo link' };
+    }
+  }
 }

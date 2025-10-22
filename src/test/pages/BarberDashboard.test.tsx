@@ -103,13 +103,18 @@ vi.mock('recharts', () => ({
 
 // Mock dos ícones
 vi.mock('lucide-react', () => ({
+  Copy: () => <span data-testid="copy-icon">Copy</span>,
   Calendar: () => <span data-testid="calendar-icon">Calendar</span>,
+  X: () => <span data-testid="x-icon">X</span>,
   DollarSign: () => <span data-testid="dollar-icon">DollarSign</span>,
   Users: () => <span data-testid="users-icon">Users</span>,
   Star: () => <span data-testid="star-icon">Star</span>,
   TrendingUp: () => <span data-testid="trending-icon">TrendingUp</span>,
   Clock: () => <span data-testid="clock-icon">Clock</span>,
   RefreshCw: () => <span data-testid="refresh-icon">RefreshCw</span>,
+  Share2: () => <span data-testid="share-icon">Share2</span>,
+  MessageSquare: () => <span data-testid="message-icon">MessageSquare</span>,
+  MessageCircle: () => <span data-testid="message-circle-icon">MessageCircle</span>,
 }));
 
 const renderWithRouter = (component: React.ReactElement) => {

@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: mode === 'development',
     rollupOptions: {
+      external: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
       output: {
         manualChunks: {
           // Separar vendor chunks para melhor cache
@@ -46,7 +47,8 @@ export default defineConfig(({ mode }) => ({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    // Usar path absoluto para evitar problemas com espaços em diretórios (ex: OneDrive)
+    setupFiles: [path.resolve(__dirname, 'src', 'test', 'setup.ts')],
     css: true,
   },
 }));

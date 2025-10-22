@@ -2,16 +2,21 @@ import React from 'react';
 
 interface ProgressStepsProps {
   currentStep: number;
+  skipBarberSelection?: boolean;
 }
 
-export const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
-  const steps = [
+export const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep, skipBarberSelection = false }) => {
+  const defaultSteps = [
     { number: 1, label: 'Barbeiro' },
     { number: 2, label: 'Serviço' },
     { number: 3, label: 'Data/Hora' },
     { number: 4, label: 'Dados' },
     { number: 5, label: 'Confirmação' }
   ];
+
+  const steps = skipBarberSelection
+    ? defaultSteps.slice(1).map((step, index) => ({ ...step, number: index + 1 }))
+    : defaultSteps;
 
   return (
     <div className="flex items-center justify-center mb-8">

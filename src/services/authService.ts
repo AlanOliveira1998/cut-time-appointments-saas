@@ -117,7 +117,7 @@ export class AuthService {
   /**
    * Verifica se o período de teste do usuário atual expirou
    */
-  static async isTrialExpired(): Promise<boolean> {
+  static async checkCurrentUserTrialExpired(): Promise<boolean> {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
