@@ -298,8 +298,9 @@ export class BookingService {
    */
   static getBookingLink(barberId: string): string {
     // Gera um link absoluto para a página de agendamento com o ID do barbeiro
+    // Use the '/agendar/:barberId' route to match the app routing and Share dialog.
     const baseUrl = window.location.origin;
-    return `${baseUrl}/booking/${barberId}`;
+    return `${baseUrl}/agendar/${barberId}`;
   }
 
   /**
