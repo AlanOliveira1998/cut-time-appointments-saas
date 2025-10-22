@@ -37,7 +37,22 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const BarberDashboard: React.FC = () => {
   const { user } = useAuth();
-  console.log('BarberDashboard user:', user); // Debug log
+  const { loading: barberLoading, isBarber, barberProfile, error: barberError } = useBarberProfile();
+  
+  console.log('BarberDashboard:', {
+    user: {
+      id: user?.id,
+      email: user?.email,
+      metadata: user?.user_metadata,
+    },
+    barberStatus: {
+      loading: barberLoading,
+      isBarber,
+      profile: barberProfile,
+      error: barberError
+    }
+  }); // Debug log detalhado
+  
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 dias atrás
     endDate: new Date().toISOString().split('T')[0] // hoje
@@ -115,7 +130,19 @@ const BarberDashboard: React.FC = () => {
       </div>
 
       {/* Card do Link de Agendamento */}
-      {user && user.id && (
+      {/* Card de Link para Agendamentos */}
+      {barberLoading ? (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Carregando...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <LoadingSpinner size="lg" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : isBarber && barberProfile ? (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>
@@ -128,19 +155,37 @@ const BarberDashboard: React.FC = () => {
           <CardContent>
             <div className="space-y-6">
               <BookingLink 
-                barberId={user.id} 
-                barberName={user.user_metadata?.name || 'Barbeiro'} 
+                barberId={barberProfile.id} 
+                barberName={user?.user_metadata?.name || user?.email?.split('@')[0] || 'Barbeiro'} 
               />
               <div className="flex justify-end">
                 <ShareBookingLink 
-                  barberId={user.id} 
-                  barberName={user.user_metadata?.name || 'Barbeiro'} 
+                  barberId={barberProfile.id} 
+                  barberName={user?.user_metadata?.name || user?.email?.split('@')[0] || 'Barbeiro'} 
                 />
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : barberError ? (
+        <Card className="mb-6 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-700">Erro ao carregar perfil de barbeiro</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">{barberError}</p>
+          </CardContent>
+        </Card>
+      ) : !isBarber ? (
+        <Card className="mb-6 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-yellow-700">Perfil de Barbeiro Não Encontrado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-yellow-600">Você precisa ter um perfil de barbeiro cadastrado para ver o link de agendamentos.</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Filtros de Data */}
       <Card className="mb-6">

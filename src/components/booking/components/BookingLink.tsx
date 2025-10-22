@@ -11,7 +11,15 @@ interface BookingLinkProps {
 }
 
 export const BookingLink: React.FC<BookingLinkProps> = ({ barberId, barberName }) => {
-  console.log('BookingLink rendered with:', { barberId, barberName }); // Debug log
+  console.log('BookingLink props:', { 
+    barberId, 
+    barberName,
+    isDefined: !!barberId && !!barberName,
+    type: {
+      barberId: typeof barberId,
+      barberName: typeof barberName
+    }
+  }); // Debug log mais detalhado
   const bookingLink = BookingService.getBookingLink(barberId);
   console.log('Generated booking link:', bookingLink); // Debug log
 
