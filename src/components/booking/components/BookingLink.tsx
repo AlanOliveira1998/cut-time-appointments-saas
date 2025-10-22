@@ -36,41 +36,39 @@ export const BookingLink: React.FC<BookingLinkProps> = ({ barberId, barberName }
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
-      <div className="flex items-center gap-2 mb-4">
-        <Share2 className="w-5 h-5 text-gray-500" />
-        <h3 className="text-lg font-semibold">Link de Agendamento</h3>
-      </div>
+    <div className="space-y-4">
+      <div className="p-4 border rounded-lg bg-muted/10">
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={bookingLink}
+              readOnly
+              className="flex-1 bg-background"
+            />
+            <Button
+              variant="secondary"
+              onClick={handleCopyLink}
+              className="flex items-center gap-2 shrink-0"
+            >
+              <Copy className="w-4 h-4" />
+              Copiar
+            </Button>
+          </div>
 
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            value={bookingLink}
-            readOnly
-            className="flex-1"
-          />
           <Button
-            variant="outline"
-            onClick={handleCopyLink}
-            className="flex items-center gap-2"
+            variant="default"
+            onClick={handleShareWhatsApp}
+            className="w-full flex items-center justify-center gap-2"
+            size="lg"
           >
-            <Copy className="w-4 h-4" />
-            Copiar
-          </Button>
-        </div>
-
-        <Button
-          variant="default"
-          onClick={handleShareWhatsApp}
-          className="w-full flex items-center justify-center gap-2"
-        >
             <MessageSquare className="w-5 h-5" />
-          Compartilhar no WhatsApp
-        </Button>
+            Enviar Link pelo WhatsApp
+          </Button>
 
-        <p className="text-sm text-gray-500">
-          Compartilhe este link com seus clientes para que eles possam agendar horários diretamente.
-        </p>
+          <p className="text-sm text-muted-foreground bg-muted/20 p-3 rounded">
+            💡 Compartilhe este link com seus clientes para que eles possam ver sua agenda e marcar horários diretamente, sem precisar entrar em contato.
+          </p>
+        </div>
       </div>
     </div>
   );
